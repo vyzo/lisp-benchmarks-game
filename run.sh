@@ -5,27 +5,50 @@ target=$1
 program=$2
 runs=${3:-3}
 
+compile_racket() {
+    raco make ${program}.rkt
+}
+
+compile_go() {
+    go build -o ${program}-go ${program}.go
+}
+
+compile_gerbil() {
+    gxc -exe -o ${program}-gerbil -O ${program}.ss
+}
+
+compile_gerbil_fpo() {
+    gxc -exe -o ${program}-gerbil-fpo -O -full-program-optimization -prelude '(declare (not safe))' ${program}.ss
+}
+
+compile_gcc() {
+    cp ${program}.gcc ${program}.c
+    gcc -O2 -o ${program}-gcc ${program}.c -lm
+}
+
 run_it() {
     case $target in
         racket)
-            compile="raco make ${program}.rkt"
+            compile=compile_racket
             run="racket ${program}.rkt"
             ;;
         go)
-            compile="go build -o ${program}-go ${program}.go"
+            compile=compile_go
             run="./${program}-go"
             ;;
         gerbil)
-            compile="gxc -exe -o ${program}-gerbil -O ${program}.ss"
+            compile=compile_gerbil
             run="./${program}-gerbil"
             ;;
         gerbil-fpo)
-            compile="gxc -exe -o ${program}-gerbil-fpo -O -full-program-optimization -prelude '(declare (not safe))' ${program}.ss"
+            compile=compile_gerbil_fpo
             run="./${program}-gerbil-fpo"
-
+            ;;
+        gcc)
+            compile=compile_gcc
+            run="./${program}-gcc"
     esac
 
-    echo "${compile}"
     ${compile}
 
     rm -f $target.time $target.output

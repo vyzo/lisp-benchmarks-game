@@ -8,12 +8,12 @@ compiler development. The
 quite satisfactory for my purposes, because there is no idiomatic
 Gerbil code to optimize, just vanilla Scheme code.
 
-So I took some programs from the (now defunct) classic benchmarks
-game and set this repo up. I include the Racket programs to see
-how well Gerbil performs compared to the most popular LISP dialect.
-I also include Go programs for reference as to how well Gerbil
-performs compared to the industry standard systems programming
-language.
+So I took some programs from the (now defunct) classic benchmarks game
+and set this repo up. I include the Racket programs to see how well
+Gerbil performs compared to the most popular LISP dialect. I also
+include Go programs for reference as to how well Gerbil performs
+compared to the industry standard systems programming language. And I
+finally include C programs, because that's the `c` of computing.
 
 ## Origin and License
 

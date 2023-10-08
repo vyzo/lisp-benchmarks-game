@@ -18,7 +18,7 @@
      (case c2 [(blue) 'red] [(red) 'blue] [else c1])]
     [(blue)
      (case c2 [(yellow) 'red] [(red) 'yellow] [else c1])]))
-  
+
 (let ([colors '(blue red yellow)])
   (for* ([a colors][b colors])
     (printf "~a + ~a -> ~a\n" a b (change a b))))
@@ -32,16 +32,18 @@
            (let loop ()
              (let ([c (channel-get meeting-ch)])
                (channel-put (car c) #f)
+               (sleep)
                (loop)))
            ;; Let two meet:
            (match-let ([(cons ch1 v1) (channel-get meeting-ch)]
                        [(cons ch2 v2) (channel-get meeting-ch)])
              (channel-put ch1 v2)
              (channel-put ch2 v1)
+             (sleep)
              (loop (sub1 n))))))))
 
 (define (creature color meeting-ch result-ch)
-  (thread 
+  (thread
    (lambda ()
      (let ([ch (make-channel)]
            [name (gensym)])
@@ -51,7 +53,7 @@
            [(cons other-color other-name)
             ;; Meet:
             (sleep) ; avoid imbalance from weak fairness
-            (loop (change color other-color) 
+            (loop (change color other-color)
                   (add1 met)
                   (+ same (if (eq? name other-name)
                               1
@@ -64,7 +66,7 @@
   (for ([i (number->string n)])
     (display " ")
     (display (hash-ref digits i))))
-  
+
 (define digits
   #hash((#\0 . "zero")
         (#\1 . "one")

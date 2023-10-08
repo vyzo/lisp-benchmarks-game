@@ -1,0 +1,10 @@
+*~
+*.c
+*.o
+compiled
+programs/*/*-go
+programs/*/*-gerbil
+programs/*/*-gerbil-fpo
+programs/*/*-gcc
+programs/*/*.output
+programs/*/output
