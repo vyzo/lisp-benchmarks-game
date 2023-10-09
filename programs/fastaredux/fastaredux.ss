@@ -63,15 +63,17 @@
         (result (make-string LOOKUP)))
     (defrule (cdf@ i)
       (##flonum->fixnum (fl* LOOKUP-fl (vector-ref cdf i))))
-    (let ((i 0) (cdf@i (cdf@ 0)) (j 0))
+    (let ((i 0) (cdf@i (cdf@ 0)) (char@i (string-ref chars 0)) (j 0) (j-start 0))
       (while (< j LOOKUP)
         (if (< j cdf@i)
+          (set! j (+ j 1))
           (begin
-            (string-set! result j (string-ref chars i))
-            (set! j (+ j 1)))
-          (begin
+            (substring-fill! result j-start j char@i)
+            (set! j-start j)
             (set! i (+ i 1))
-            (set! cdf@i (cdf@ i))))))
+            (set! cdf@i (cdf@ i))
+            (set! char@i (string-ref chars i)))))
+      (substring-fill! result j-start j char@i))
     result))
 
 (def (select-random lookup-table)
