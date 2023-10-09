@@ -26,27 +26,41 @@ compile_gcc() {
     gcc -O2 -o ${program}-gcc ${program}.c -lm
 }
 
+check() {
+    local file=${1}
+    if [ ! -e ${file} ]; then
+        echo "${file} does not exist"
+        exit 42
+    fi
+}
+
 run_it() {
     case $target in
-        racket)
-            compile=compile_racket
-            run="racket ${program}.rkt"
+        gcc)
+            check ${program}.gcc
+            compile=compile_gcc
+            run="./${program}-gcc"
             ;;
         go)
+            check ${program}.go
             compile=compile_go
             run="./${program}-go"
             ;;
+        racket)
+            check ${program}.rkit
+            compile=compile_racket
+            run="racket ${program}.rkt"
+            ;;
         gerbil)
+            check ${program}.ss
             compile=compile_gerbil
             run="./${program}-gerbil"
             ;;
         gerbil-fpo)
+            check ${program}.ss
             compile=compile_gerbil_fpo
             run="./${program}-gerbil-fpo"
             ;;
-        gcc)
-            compile=compile_gcc
-            run="./${program}-gcc"
     esac
 
     ${compile}
