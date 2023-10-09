@@ -47,7 +47,7 @@ run_it() {
             run="./${program}-go"
             ;;
         racket)
-            check ${program}.rkit
+            check ${program}.rkt
             compile=compile_racket
             run="racket ${program}.rkt"
             ;;
