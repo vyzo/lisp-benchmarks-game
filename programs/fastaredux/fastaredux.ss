@@ -114,7 +114,7 @@
 (def +output-buffer+
   (make-u8vector +output-size+))
 (def +output-cursor+ 0)
-(def +output-fd+ (fdopen 1 'out 'stdout))
+(def +output-fd+ 1)
 
 (defrule (write-output-line str)
   (begin
