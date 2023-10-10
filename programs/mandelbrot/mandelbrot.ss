@@ -22,8 +22,7 @@
 
 (defrule (defregister name)
   (begin
-    (def name #f)
-    (set! name (fixnum->flonum (random-integer 1337)))))
+    (def name (fixnum->flonum (random-integer 1337)))))
 
 (defalias ->fl fixnum->flonum)
 (defrules ^2 ())
