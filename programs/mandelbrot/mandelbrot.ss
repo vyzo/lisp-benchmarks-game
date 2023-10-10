@@ -195,9 +195,9 @@
           (fl!= rfp-zi (+ (* 2 tmp-zr rfp-zi) rfp-ci))
           continue)))
     (cond
-     ((< (+ i 8) +iterations+)
-      (unroll (o o o o o o o o)
-        (loop (+ i 8))))
+     ((< (+ i 12) +iterations+)
+      (unroll (o o o o o o o o o o o o)
+        (loop (+ i 12))))
      ((<= i +iterations+)
       (unroll1 (loop (+ i 1))))
      (else 1))))
