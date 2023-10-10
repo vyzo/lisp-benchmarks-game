@@ -5,7 +5,8 @@
 (import :std/sugar
         :std/format
         :std/text/utf8
-        :std/os/fdio)
+        :std/os/fdio
+        :gerbil/gambit)
 (export main)
 (declare
   (not safe)
@@ -18,122 +19,158 @@
 ;; which handles all the basic operations and fixnum mixing.
 ;; They are generally useful for working with flonums without creating intermediate garbage.
 ;; (yes, I am experimenting here)
+
+(defrule (defregister name)
+  (begin
+    (def name #f)
+    (set! name (fixnum->flonum (random-integer 1337)))))
+
 (defalias ->fl fixnum->flonum)
-(defrules fl+! (->fl)
-  ((_ r (->fl x) (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = (___INT(___ARG2) + ___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r (->fl x) y)
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) + ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) + ___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x y)
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) + ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y)))
+(defrules ^2 ())
 
-(defrules fl-! (->fl)
-  ((_ r (->fl x) (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) - ___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r (->fl x) y)
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) - ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) - ___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x y)
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) - ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y)))
+(begin-syntax
+  (def (collect-arguments stx)
+    (deduplicate
+     (let recur ((stx-expr stx) (ids []))
+       (syntax-case stx-expr (^2 ->fl)
+         (id (identifier? #'id) (cons #'id ids))
+         (datum (stx-number? #'datum) ids)
+         ((op expr ...)
+          (and (identifier? #'op)
+               (or (free-identifier=? #'op #'+)
+                   (free-identifier=? #'op #'-)
+                   (free-identifier=? #'op #'*)
+                   (free-identifier=? #'op #'/)
+                   (free-identifier=? #'op #'?)))
+          (let lp ((rest #'(expr ...)) (ids ids))
+            (syntax-case rest ()
+              ((hd . rest)
+               (lp #'rest (recur #'hd ids)))
+              (() ids))))
+         ((^2 expr)
+          (recur #'expr ids))
+         ((->fl expr)
+          (cond
+           ((identifier? #'expr)
+            (cons #'expr ids))
+           ((stx-number? #'expr)
+            ids)
+           (else
+            (raise-syntax-error #f "bad expression" stx stx-expr))))
+         (_
+          (raise-syntax-error #f "bad expression" stx stx-expr))))))
 
-(defrules fl*! (->fl)
-  ((_ r (->fl x) (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) * ___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r (->fl x) y)
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) * ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) * ___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x y)
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) * ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x y (->fl z))
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) * ___F64UNBOX(___ARG3) * ___INT(___ARG4); ___RESULT = ___VOID;"
-             r x y z)))
+  (def (deduplicate ids)
+    (let lp ((rest ids) (result []))
+      (match rest
+        ([id . rest]
+         (if (find (cut bound-identifier=? <> id) result)
+           (lp rest result)
+           (lp rest (cons id result))))
+        (else result))))
 
-(defrules fl/! (->fl)
-  ((_ r (->fl x) (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) / (double)___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r (->fl x) y)
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) / ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x (->fl y))
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) / ___INT(___ARG3); ___RESULT = ___VOID;"
-             r x y))
-  ((_ r x y)
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) / ___F64UNBOX(___ARG3); ___RESULT = ___VOID;"
-             r x y)))
+  (def (make-c-code-arguments ids next)
+    (let lp ((rest ids) (args []) (next next))
+      (match rest
+        ([_ . rest]
+         (lp rest (cons (string-append "___ARG" (number->string next)) args) (+ next 1)))
+        ([] (reverse args)))))
 
-(defrules fl/-! (->fl)
-  ((_ r (->fl x) (->fl y) z)
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) / (double)___INT(___ARG3) - ___F64UNBOX(___ARG4); ___RESULT = ___VOID;"
-             r x y z)))
+  (def (expand-expr stx ids args)
+    (syntax-case stx (+ - * / ^2 ->fl)
+      (id (identifier? #'id)
+          (let (arg (identifier-argument #'id ids args))
+            (string-append "___F64UNBOX(" arg ")")))
+      (datum (stx-number? #'datum)
+             (if (negative? (stx-e #'datum))
+               (string-append "(" (number->string* (stx-e #'datum)) ")")
+               (number->string* (stx-e #'datum))))
+      ((+ expr ...)
+       (string-join (stx-map (cut expand-expr <> ids args) #'(expr ...))
+                    #\+))
+      ((- expr ...)
+       (string-join (stx-map (cut expand-expr <> ids args) #'(expr ...))
+                    #\-))
+      ((* expr ...)
+       (string-join (stx-map (cut expand-expr <> ids args) #'(expr ...))
+                    #\*))
+      ((/ expr ...)
+       (string-join (stx-map (cut expand-expr <> ids args) #'(expr ...))
+                    #\/))
+      ((^2 expr)
+       (let (c-code (expand-expr #'expr ids args))
+         (string-append "({double r = " c-code "; r *= r; r;})")))
+      ((->fl expr)
+       (cond
+        ((stx-datum? #'expr)
+         (string-append "((double)" (number->string* (stx-e #'expr)) ")"))
+        ((identifier? #'expr)
+         (string-append "((double)___INT(" (identifier-argument #'expr ids args) "))"))
+        (else
+         (raise-syntax-error #f "bad expression" stx #'(->fl expr)))))))
 
-(defrules fl*/-! (->fl)
-  ((_ r (->fl x) (->fl y) (->fl z) (->fl w))
-   (##c-code "___F64UNBOX(___ARG1) = ___INT(___ARG2) * ___INT(___ARG3) / (double)___INT(___ARG4) - ___INT(___ARG5); ___RESULT = ___VOID;"
-             r x y z w)))
+  (def (identifier-argument id ids args)
+    (let loop ((rest-ids ids) (rest-args args))
+      (match rest-ids
+        ([xid . rest-ids]
+         (if (bound-identifier=? id xid)
+           (car rest-args)
+           (loop rest-ids (cdr rest-args)))))))
 
-(defrules fl-+! ()
-  ((_ r x y z)
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2) - ___F64UNBOX(___ARG3) + ___F64UNBOX(___ARG4); ___RESULT= ___VOID;"
-             r x y z)))
+  (def (number->string* datum)
+    (let (str (number->string datum))
+      (cond
+       ((string-prefix? "." str)
+        (string-append "0" str))
+       ((string-prefix? "-." str)
+        (string-append "-0." (substring str 2 (string-length str))))
+       ((eqv? (string-ref str (1- (string-length str))) #\.)
+        (string-append str "0"))
+       (else str)))))
 
-(defrules fl*2+! ()
-  ((_ r x y z)
-   (##c-code "___F64UNBOX(___ARG1) = 2 * ___F64UNBOX(___ARG2) * ___F64UNBOX(___ARG3)  + ___F64UNBOX(___ARG4); ___RESULT= ___VOID;"
-             r x y z)))
+(defsyntax (fl!= stx)
+  (syntax-case stx ()
+    ((_ reg expr)
+     (identifier? #'reg)
+     (with-syntax* (((id ...) (collect-arguments #'expr))
+                    ((arg ...) (make-c-code-arguments #'(id ...) 2))
+                    (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
+                    (c-code (string-append "___F64UNBOX(___ARG1) = "
+                                           (stx-e #'c-code)
+                                           "; ___RESULT = ___VOID;")))
+       #'(##c-code c-code reg id ...)))))
 
-(defrules fl=! ()
-  ((_ r x)
-   (##c-code "___F64UNBOX(___ARG1) = ___F64UNBOX(___ARG2); ___RESULT = ___VOID;"
-             r x)))
-
-(defrules fl^2! ()
-  ((_ r x)
-   (##c-code "___F64UNBOX(___ARG1) = ({double r2 = ___F64UNBOX(___ARG2); r2 *= r2; r2;}); ___RESULT= ___VOID;"
-             r x)))
-
-(defrules fl+^2>? ()
-  ((_ x y z)
-   (##c-code "double r1 = ___F64UNBOX(___ARG1); r1 *= r1; double r2 = ___F64UNBOX(___ARG2); r2 *= r2; if ((r1 + r2) > ___F64UNBOX(___ARG3)) { ___RESULT = ___TRU; } else { ___RESULT = ___FAL; }"
-             x y z)))
-
-(defrules fl-^2+! ()
-  ((_ r x y z)
-   (##c-code "___F64UNBOX(___ARG1) = ({double r =___F64UNBOX(___ARG2); r *= r; r;}) - ({double r = ___F64UNBOX(___ARG3); r *= r; r;}) + ___F64UNBOX(___ARG4); ___RESULT= ___VOID;"
-             r x y z)))
-
-(defrules fl*!+! (->fl)
-  ((_ r x (->fl z) w)
-   (##c-code "double r = ___F64UNBOX(___ARG1);  ___F64UNBOX(___ARG1) = r *___F64UNBOX(___ARG2) * ___INT(___ARG3) + ___F64UNBOX(___ARG4); ___RESULT = ___VOID;"
-             r x z w)))
+(defsyntax (fl!? stx)
+  (syntax-case stx ()
+    ((_ op e1 e2)
+     (and (identifier? #'op)
+          (or (free-identifier=? #'op #'>)
+              (free-identifier=? #'op #'>=)
+              (free-identifier=? #'op #'=)
+              (free-identifier=? #'op #'<=)
+              (free-identifier=? #'op #'<)))
+     (with-syntax* (((id ...) (collect-arguments #'(? e1 e2)))
+                    ((arg ...) (make-c-code-arguments #'(id ...) 1))
+                    (c-code1 (expand-expr #'e1 #'(id ...) #'(arg ...)))
+                    (c-code2 (expand-expr #'e2 #'(id ...) #'(arg ...)))
+                    (c-op (if (free-identifier=? #'op #'=)
+                            "=="
+                            (symbol->string (stx-e #'op))))
+                    (c-code
+                     (string-append "___RESULT = (" (stx-e #'c-code1) (stx-e #'c-op) (stx-e #'c-code2)
+                                    ") ? ___TRU : ___FAL;")))
+       #'(##c-code c-code id ...)))))
 
 ;; fp "registers"
-(def rfp-ci   1337.0)
-(def rfp-cr   1337.1)
-(def rfp-zr   1337.2)
-(def rfp-zi   1337.3)
-(def tmp-zr   1337.4)
-(def rfp-2/n  1337.5)
+(defregister rfp-ci)
+(defregister rfp-cr)
+(defregister rfp-zr)
+(defregister rfp-zi)
+(defregister tmp-zr)
 
 (def (mandelbrot)
-  (fl=! rfp-zr rfp-cr)
-  (fl=! rfp-zi rfp-ci)
+  (fl!= rfp-zr rfp-cr)
+  (fl!= rfp-zi rfp-ci)
   (let loop ((i 1))
     (defrules unroll ()
       ((_ () continue)
@@ -142,12 +179,12 @@
        (unroll1
          (unroll rest continue))))
     (defrule (unroll1 continue)
-      (if (fl+^2>? rfp-zr rfp-zi +limit-sqr+)
+      (if (fl!? > (+ (^2 rfp-zr) (^2 rfp-zi)) +limit-sqr+)
         0
         (begin
-          (fl=! tmp-zr rfp-zr)
-          (fl-^2+! rfp-zr rfp-zr rfp-zi rfp-cr)
-          (fl*2+!  rfp-zi tmp-zr rfp-zi rfp-ci)
+          (fl!= tmp-zr rfp-zr)
+          (fl!= rfp-zr (+ (- (^2 rfp-zr) (^2 rfp-zi)) rfp-cr))
+          (fl!= rfp-zi (+ (* 2 tmp-zr rfp-zi) rfp-ci))
           continue)))
     (cond
      ((< (+ i 8) +iterations+)
@@ -169,7 +206,7 @@
       (* bit0 #b00000001))))
 
 (def (mandelbrot-x y n)
-  (fl=! rfp-cr -1.5)
+  (fl!= rfp-cr -1.5)
   (let loop ((x 0) (bit 0) (byte 0))
     (defrules unroll* ()
       ((_ () continue ...)
@@ -179,7 +216,7 @@
          (unroll* rest continue ...))))
     (defrule (unroll1 (bitx) continue ...)
       (let (bitx (mandelbrot))
-        (fl+! rfp-cr rfp-cr rfp-2/n)
+        (fl!= rfp-cr (+ rfp-cr (/ 2 (->fl n))))
         continue ...))
     (defrule (unroll (byte) continue ...)
       (unroll1 (m)
@@ -205,11 +242,10 @@
 
 (def (mandelbrot-y y n)
   (when (< y n)
-    (fl*/-! rfp-ci (->fl 2) (->fl y) (->fl n) (->fl 1))
+    (fl!= rfp-ci (- (/ (* 2 (->fl y)) (->fl n)) 1))
     (mandelbrot-x y n)))
 
 (def (mandelbrot-loop n)
-  (fl/! rfp-2/n (->fl 2) (->fl n))
   (mandelbrot-y 0 n))
 
 (def (main n)
