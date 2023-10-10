@@ -1,7 +1,7 @@
 ;;; -*- Gerbil -*-
 ;;; © vyzo
-;;; fast program from Computer Language Benchmarks Game
-;;; orignated with a port of the racket version, but is now *heavily* optimized
+;;; fastaredux program from Computer Language Benchmarks Game
+;;; orignated with a port of the racket version of fasta, now *heavily* optimized
 (import :std/iter
         :std/sugar
         :std/os/fdio
@@ -11,7 +11,7 @@
   (not safe)
   (fixnum))
 
-(define +alu+
+(def +alu+
   (string-append
    "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG"
    "GAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGA"
@@ -21,7 +21,7 @@
    "AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC"
    "AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA"))
 
-(define +iub+
+(def +iub+
   '((#\a . 0.27) (#\c . 0.12) (#\g . 0.12) (#\t . 0.27) (#\B . 0.02)
     (#\D . 0.02) (#\H . 0.02) (#\K . 0.02) (#\M . 0.02) (#\N . 0.02)
     (#\R . 0.02) (#\S . 0.02) (#\V . 0.02) (#\W . 0.02) (#\Y . 0.02)))
