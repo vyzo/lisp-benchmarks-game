@@ -4,7 +4,6 @@
 ;;; orignated with a port of the racket version, but is now *heavily* optimized
 (import :std/iter
         :std/sugar
-        :std/os/fd
         :std/os/fdio
         :std/text/utf8)
 (export main)

@@ -4,8 +4,8 @@
 ;;; orignated with a port of the racket version, but is now *heavily* optimized
 (import :std/iter
         :std/sugar
-        :std/os/fd
-        :std/os/fdio)
+        :std/os/fdio
+        :std/text/utf8)
 (export main)
 (declare
   (not safe)
@@ -63,28 +63,28 @@
         (string-ref chars i)
         (loop (+ i 1))))))
 
-(def (repeat-fasta id desc n sequence)
+(def (repeat-fasta head n sequence)
   (let (seqlen (string-length sequence))
-    (display-head  id desc)
+    (write-output-line head)
     (let loop-o ((n n) (k 0))
       (when (> n 0)
         (let (m (min n +line-size+))
           (let loop-i ((i 0) (k k))
             (if (< i m)
               (let (k (if (= k seqlen) 0 k))
-                (write-output (string-ref sequence k))
+                (write-output-char (string-ref sequence k))
                 (loop-i (+ i 1) (+ k 1)))
               (begin
-                (write-newline)
+                (write-output-newline)
                 (loop-o (- n +line-size+) k)))))))))
 
-(def (random-fasta id desc n cumulative-table)
-  (display-head id desc)
+(def (random-fasta head n cumulative-table)
+  (write-output-line head)
   (let ((n n))
     (while (> n 0)
       (for (_ (in-range (min n +line-size+)))
-        (write-output (select-random cumulative-table)))
-      (write-newline)
+        (write-output-char (select-random cumulative-table)))
+      (write-output-newline)
       (set! n (- n +line-size+)))))
 
 (def +line-size+ 60)
@@ -92,32 +92,40 @@
 (def +output-buffer+
   (make-u8vector +output-size+))
 (def +output-cursor+ 0)
-(def +output-fd+ (fdopen 1 'out 'stdout))
+(def +output-fd+ 1)
 
-(defrule (display-head id desc)
+(defrule (write-output-line str)
   (begin
-    (flush-output)
-    (let (output
-          (call-with-output-u8vector []
-            (lambda (port)
-              (write-string id port)
-              (write-char #\space port)
-              (write-string desc port)
-              (newline port))))
-      (fdwrite +output-fd+ output))))
+    (write-output-string str)
+    (write-output-newline)))
 
-(defrule (write-output char)
+(defrule (write-output-u8 u8)
   (if (= +output-cursor+ +output-size+)
     (begin
       (fdwrite +output-fd+ +output-buffer+ 0 +output-size+)
-      (u8vector-set! +output-buffer+ 0 (char->integer char))
+      (u8vector-set! +output-buffer+ 0 u8)
       (set! +output-cursor+ 1))
     (begin
-      (u8vector-set! +output-buffer+ +output-cursor+ (char->integer char))
+      (u8vector-set! +output-buffer+ +output-cursor+ u8)
       (set! +output-cursor+ (+ +output-cursor+ 1)))))
 
-(defrule (write-newline)
-  (write-output #\newline))
+(defrule (write-output-string str)
+  (let* ((bytes (string->utf8 str))
+         (len   (u8vector-length bytes))
+         (output-cursor+len (+ +output-cursor+ len)))
+    (if (<= output-cursor+len +output-size+)
+      (begin
+        (subu8vector-move! bytes 0 len +output-buffer+  +output-cursor+)
+        (set! +output-cursor+ output-cursor+len))
+      (begin
+        (flush-output)
+        (fdwrite +output-fd+ bytes)))))
+
+(defrule (write-output-newline)
+  (write-output-char #\newline))
+
+(defrule (write-output-char char)
+  (write-output-u8 (char->integer char)))
 
 (defrule (flush-output)
   (when (> +output-cursor+ 0)
@@ -126,12 +134,12 @@
 
 (def (main n)
   (let (n (string->number n))
-    (repeat-fasta ">ONE" "Homo sapiens alu" (* n 2) +alu+)
+    (repeat-fasta ">ONE Homo sapiens alu" (* n 2) +alu+)
 
-    (random-fasta ">TWO" "IUB ambiguity codes" (* n 3)
+    (random-fasta ">TWO IUB ambiguity codes" (* n 3)
                   (make-cumulative-table +iub+))
 
-    (random-fasta ">THREE" "Homo sapiens frequency" (* n 5)
+    (random-fasta ">THREE Homo sapiens frequency" (* n 5)
                   (make-cumulative-table +homosapien+))
 
     (flush-output)))
