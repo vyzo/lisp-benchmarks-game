@@ -69,7 +69,11 @@ run_it() {
     i=1
     while [ ${i} -le ${runs} ]; do
         echo "run $i"
-        /usr/bin/time -f "%U,%S,%M" -a -o ${target}.time ${run} "$(cat input)" > ${target}.output
+        if [ -e input.stdin ]; then
+            /usr/bin/time -f "%U,%S,%M" -a -o ${target}.time ${run} < input.stdin > ${target}.output
+        else
+            /usr/bin/time -f "%U,%S,%M" -a -o ${target}.time ${run} "$(cat input)" > ${target}.output
+        fi
         diff -q output ${target}.output
         if [ $? -ne 0 ]; then
             echo "output does not match expected"
