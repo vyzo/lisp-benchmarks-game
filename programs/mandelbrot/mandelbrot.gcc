@@ -1,113 +1,63 @@
 /* The Computer Language Benchmarks Game
  * http://benchmarksgame.alioth.debian.org/
 
-  contributed by Paolo Bonzini
-  further optimized by Jason Garrett-Glaser
-  pthreads added by Eckehard Berns
-  further optimized by Ryan Henszey
-  modified by Samy Al Bahra (use GCC atomic builtins)
+   contributed by Greg Buchholz
+
+   for the debian (AMD) machine...
+   compile flags:  -O3 -ffast-math -march=athlon-xp -funroll-loops
+
+   for the gp4 (Intel) machine...
+   compile flags:  -O3 -ffast-math -march=pentium4 -funroll-loops
 */
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
-
-typedef double v2df __attribute__ ((vector_size(16))); /* vector of two doubles */
-typedef int v4si __attribute__ ((vector_size(16))); /* vector of four ints */
-
-// 4 works best on a quiet machine at nice -20
-// 8 on a noisy machine at default priority
-#define NWORKERS 8
-
-int w, h;
-v2df zero = { 0.0, 0.0 };
-v2df four = { 4.0, 4.0 };
-v2df nzero;
-double inverse_w;
-double inverse_h;
-
-char *whole_data;
-int y_pick;
-
-static void * worker(void *_args) {
-    char *data;
-    double x, y;
-    int bit_num;
-    char byte_acc = 0;
-
-    for (;;) {
-	y = __sync_fetch_and_add(&y_pick, 1);
-        if (y >= h)
-            return NULL;
-        data = &whole_data[(w >> 3) * (int)y];
-
-        for(bit_num=0,x=0;x<w;x+=2)
-        {
-            v2df Crv = { (x+1.0)*inverse_w-1.5, (x)*inverse_w-1.5 };
-            v2df Civ = { y*inverse_h-1.0, y*inverse_h-1.0 };
-            v2df Zrv = { 0.0, 0.0 };
-            v2df Ziv = { 0.0, 0.0 };
-            v2df Trv = { 0.0, 0.0 };
-            v2df Tiv = { 0.0, 0.0 };
-
-            int i = 0;
-	    int mask;
-            do {
-                Ziv = (Zrv*Ziv) + (Zrv*Ziv) + Civ;
-                Zrv = Trv - Tiv + Crv;
-                Trv = Zrv * Zrv;
-                Tiv = Ziv * Ziv;
-
-                /* from mandelbrot C++ GNU g++ #5 program  */
-		v2df delta = (v2df)__builtin_ia32_cmplepd( (Trv + Tiv), four );
-		mask = __builtin_ia32_movmskpd(delta);
-
-            } while (++i < 50 && (mask));
-
-            byte_acc <<= 2;
-	    byte_acc |= mask;
-            bit_num+=2;
-
-            if(!(bit_num&7)) {
-                data[(bit_num>>3) - 1] = byte_acc;
-                byte_acc = 0;
-            }
-        }
-
-        if(bit_num&7) {
-            byte_acc <<= (8-w%8);
-            bit_num += 8;
-            data[bit_num>>3] = byte_acc;
-            byte_acc = 0;
-        }
-    }
-}
-
+#include <stdio.h>
 
 int main (int argc, char **argv)
 {
-    pthread_t ids[NWORKERS];
-    int i;
-
-    nzero = -zero;
+    int w, h, bit_num = 0;
+    char byte_acc = 0;
+    int i, iter = 50;
+    double x, y, limit = 2.0;
+    double Zr, Zi, Cr, Ci, Tr, Ti;
 
     w = h = atoi(argv[1]);
 
-    inverse_w = 2.0 / w;
-    inverse_h = 2.0 / h;
-
-    y_pick = 0;
-    whole_data = malloc(w * (w >> 3));
-
-    for (i = 0; i < NWORKERS; i++)
-        pthread_create(&ids[i], NULL, worker, NULL);
-    for (i = 0; i < NWORKERS; i++)
-        pthread_join(ids[i], NULL);
-
     printf("P4\n%d %d\n",w,h);
-    fwrite(whole_data, h, w >> 3, stdout);
 
-    free(whole_data);
+    for(y=0;y<h;++y)
+    {
+        for(x=0;x<w;++x)
+        {
+            Zr = Zi = Tr = Ti = 0.0;
+            Cr = (2.0*x/w - 1.5); Ci=(2.0*y/h - 1.0);
 
-    return 0;
+            for (i=0;i<iter && (Tr+Ti <= limit*limit);++i)
+            {
+                Zi = 2.0*Zr*Zi + Ci;
+                Zr = Tr - Ti + Cr;
+                Tr = Zr * Zr;
+                Ti = Zi * Zi;
+            }
+
+            byte_acc <<= 1;
+            if(Tr+Ti <= limit*limit) byte_acc |= 0x01;
+
+            ++bit_num;
+
+            if(bit_num == 8)
+            {
+                putc(byte_acc,stdout);
+                byte_acc = 0;
+                bit_num = 0;
+            }
+            else if(x == w-1)
+            {
+                byte_acc <<= (8-w%8);
+                putc(byte_acc,stdout);
+                byte_acc = 0;
+                bit_num = 0;
+            }
+        }
+    }
 }
