@@ -1,7 +1,6 @@
 #!/bin/bash
 
 . setup.sh
-./prepare.sh
 
 for x in $GAMES; do
     echo ">>> Running game $x"

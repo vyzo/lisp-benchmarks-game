@@ -37,8 +37,17 @@ able to reason about Gerbil performance concretely with some
 baselines and evaluate progress as the compiler implementation advances.
 
 ## How to run the benchmarks
+You need:
+- Gerbil v0.18-rc1 or later
+- Racket; I tested with v8.2
+- Go; I tested with 1.21.2
+- GCC; I tested with 11.4.0
 
-(TODO)
+To run:
+```shell
+$ ./prepare.sh
+$ ./run-all.sh
+```
 
 ## Results
 

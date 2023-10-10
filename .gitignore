@@ -8,3 +8,4 @@ programs/*/*-gerbil-fpo
 programs/*/*-gcc
 programs/*/*.output
 programs/*/output
+gxprof.out
