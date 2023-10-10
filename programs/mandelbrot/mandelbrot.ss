@@ -1,7 +1,7 @@
 ;;; -*- Gerbil -*-
 ;;; © vyzo
 ;;; mandelbrot program from Computer Language Benchmarks Game
-;;; ported from racket version
+;;; ported from racket and optimized for fp performance
 (import :std/sugar
         :std/format
         :std/text/utf8
@@ -17,7 +17,7 @@
 (defalias ->fl fixnum->flonum)
 
 (def (mandelbrot x y n ci)
-  (let ((cr (fl- (fl/ (fl* 2.0 (->fl x)) (->fl n)) 1.5)))
+  (let (cr (fl- (fl/ (fl* 2.0 (->fl x)) (->fl n)) 1.5))
     (let loop ((i 0) (zr 0.0) (zi 0.0))
       (if (> i +iterations+)
           1
@@ -32,7 +32,7 @@
 (def (mandelbrot-loop n)
   (let loop-y ((y 0))
     (when (< y n)
-      (let ((ci (fl- (fl/ (fl* 2.0 (->fl y)) (->fl n)) 1.0)))
+      (let (ci (fl- (fl/ (fl* 2.0 (->fl y)) (->fl n)) 1.0))
         (let loop-x ((x 0) (bitnum 0) (byteacc 0))
           (if (< x n)
             (let ((bitnum (+ 1 bitnum))
@@ -42,9 +42,10 @@
                ((= bitnum 8)
                 (write-output-u8 byteacc)
                 (loop-x (+ 1 x) 0 0))
-               (else (loop-x (+ 1 x) bitnum byteacc))))
+               (else
+                (loop-x (+ 1 x) bitnum byteacc))))
             (begin
-              (when (positive? bitnum)
+              (when (> bitnum 0)
                 (write-output-u8 (fxarithmetic-shift byteacc (- 8 (fxand n #x7)))))
               (loop-y (+ y 1)))))))))
 
