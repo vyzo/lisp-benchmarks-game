@@ -35,6 +35,7 @@
 (defregister vz1)
 (defregister m1)
 (defregister m2)
+(defregister dt)
 
 ;; the celestial body
 (defstruct body (x y z vx vy vz mass))
@@ -78,7 +79,8 @@
              (else (loop rest))))))
       (else (register-ref e)))))
 
-(def (advance! system dt)
+(def (advance! system delta)
+  (fl!= dt delta)
   (let loop ((rest system))
     (match rest
       ([hd . rest]
