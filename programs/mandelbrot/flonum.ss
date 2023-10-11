@@ -7,9 +7,46 @@
 ;; They are generally useful for working with flonums without creating intermediate garbage.
 ;; (yes, I am experimenting here)
 
-(defrule (defregister name)
-  (begin
-    (def name (fixnum->flonum (random-integer 1337)))))
+(begin-syntax
+  (defstruct register-info (var))
+  (def (mangle name)
+    (list->string (map mangle-char (string->list name))))
+  (def (mangle-char char)
+    (case char
+      ((#\- #\/ #\# #\! #\@ #\$ #\% #\^ #\& #\*) #\_)
+      (else char))))
+
+(defsyntax (defregister stx)
+  (syntax-case stx ()
+    ((_ name)
+     (and (identifier? #'name)
+          (module-context? (current-expander-context)))
+     (let* ((regname
+             (cond
+              ((module-context-ns (current-expander-context))
+               => (lambda (ns) (mangle (string-append ns "#" (symbol->string (stx-e #'name))))))
+              (else
+               (mangle (symbol->string (stx-e #'name))))))
+            (declreg
+             (string-append "static double " regname "= 0;")))
+       (with-syntax ((regname regname) (declreg declreg))
+       #'(begin
+           (begin-foreign
+             (c-declare declreg))
+           (defsyntax name (make-register-info 'regname))))))))
+
+(defsyntax (register-ref stx)
+  (syntax-case stx ()
+    ((_ name)
+     (and (identifier? #'name)
+          (register-info? (syntax-local-value #'name)))
+     (let* ((regvar (register-info-var (syntax-local-value #'name false)))
+            (c-code (string-append "___RESULT= ___F64BOX(" regvar ");")))
+       (with-syntax ((c-code c-code))
+         #'(##c-code c-code))))))
+
+(def (make-flonum)
+  (##c-code "___RESULT= ___F64BOX(0);"))
 
 (defalias ->fl fixnum->flonum)
 (defrules ^2 ())
@@ -18,8 +55,11 @@
   (def (collect-arguments stx)
     (deduplicate
      (let recur ((stx-expr stx) (ids []))
-       (syntax-case stx-expr (^2 ->fl @)
-         (id (identifier? #'id) (cons #'id ids))
+       (syntax-case stx-expr (^2 sqrt ->fl @)
+         (id (identifier? #'id)
+             (if (register-info? (syntax-local-value #'id false))
+               ids
+               (cons #'id ids)))
          (datum (stx-number? #'datum) ids)
          ((op expr ...)
           (and (identifier? #'op)
@@ -34,6 +74,8 @@
                (lp #'rest (recur #'hd ids)))
               (() ids))))
          ((^2 expr)
+          (recur #'expr ids))
+         ((sqrt expr)
           (recur #'expr ids))
          ((->fl expr)
           (cond
@@ -71,7 +113,10 @@
         ([] (reverse args)))))
 
   (def (expand-expr stx ids args)
-    (syntax-case stx (+ - * / ^2 ->fl @)
+    (syntax-case stx (+ - * / ^2 sqrt ->fl @)
+      (id (and (identifier? #'id)
+               (register-info? (syntax-local-value #'id false)))
+          (register-info-var (syntax-local-value #'id)))
       (id (identifier? #'id)
           (let (arg (identifier-argument #'id ids args))
             (string-append "___F64UNBOX(" arg ")")))
@@ -84,7 +129,8 @@
                       (string-join (stx-map (cut expand-expr <> ids args) #'(expr ...))
                                    #\+)
                       ")"))
-
+      ((- expr)
+       (string-append "-(" (expand-expr #'expr ids args) ")"))
       ((- expr ...)
        (string-append "("
                       (string-join (stx-map (cut expand-expr <> ids args) #'(expr ...))
@@ -103,6 +149,9 @@
       ((^2 expr)
        (let (c-code (expand-expr #'expr ids args))
          (string-append "({double r = " c-code "; r *= r; r;})")))
+      ((sqrt expr)
+       (let (c-code (expand-expr #'expr ids args))
+         (string-append "sqrt(" c-code ")")))
       ((->fl expr)
        (cond
         ((stx-datum? #'expr)
@@ -141,13 +190,19 @@
   (syntax-case stx (@)
     ((_ reg expr)
      (identifier? #'reg)
-     (with-syntax* (((id ...) (collect-arguments #'expr))
-                    ((arg ...) (make-c-code-arguments #'(id ...) 2))
-                    (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
-                    (c-code (string-append "___F64UNBOX(___ARG1) = "
-                                           (stx-e #'c-code)
-                                           "; ___RESULT = ___VOID;")))
-       #'(##c-code c-code reg id ...)))
+     (let (register? (register-info? (syntax-local-value #'reg false)))
+       (with-syntax* (((id ...) (collect-arguments #'expr))
+                      ((arg ...) (make-c-code-arguments #'(id ...) (if register? 1 2)))
+                      (c-code (expand-expr #'expr #'(id ...) #'(arg ...))))
+         (if register?
+           (with-syntax ((c-code (string-append (register-info-var (syntax-local-value #'reg))
+                                                "= " (stx-e #'c-code)
+                                                "; ___RESULT = ___VOID;")))
+             #'(##c-code c-code id ...))
+           (with-syntax((c-code (string-append "___F64UNBOX(___ARG1) = "
+                                               (stx-e #'c-code)
+                                               "; ___RESULT = ___VOID;")))
+             #'(##c-code c-code reg id ...))))))
     ((_ (@ f64v offset) expr)
      (and (identifier? #'f64v)
           (or (identifier? #'offset)
@@ -181,3 +236,10 @@
                      (string-append "___RESULT = (" (stx-e #'c-code1) (stx-e #'c-op) (stx-e #'c-code2)
                                     ") ? ___TRU : ___FAL;")))
        #'(##c-code c-code id ...)))))
+
+(defrules fl! ()
+  ((_ 0) (make-flonum))
+  ((_ expr)
+   (let (reg (make-flonum))
+     (fl!= reg expr)
+     reg)))
