@@ -35,7 +35,6 @@
 ;;
 ;; Note (vyzo): one less octet, to fit in fixnum in 64 bit
 (def board      #xFFC000000000000)
-(def board-mask #xFFC000000000000)
 
 ;; The puzzle pieces must be specified by the path followed
 ;; from one end to the other along 12 hexagonal directions.
