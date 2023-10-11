@@ -14,12 +14,23 @@
   (def (mangle-char char)
     (case char
       ((#\- #\/ #\# #\! #\@ #\$ #\% #\^ #\& #\*) #\_)
-      (else char))))
+      (else char)))
+  (def (number->string* datum)
+    (let (str (number->string datum))
+      (cond
+       ((string-prefix? "." str)
+        (string-append "0" str))
+       ((string-prefix? "-." str)
+        (string-append "-0." (substring str 2 (string-length str))))
+       ((eqv? (string-ref str (1- (string-length str))) #\.)
+        (string-append str "0"))
+       (else str)))))
 
 (defsyntax (defregister stx)
   (syntax-case stx ()
-    ((_ name)
+    ((_ name iv)
      (and (identifier? #'name)
+          (stx-number? #'iv)
           (module-context? (current-expander-context)))
      (let* ((regname
              (cond
@@ -28,12 +39,14 @@
               (else
                (mangle (symbol->string (stx-e #'name))))))
             (declreg
-             (string-append "static double " regname "= 0;")))
+             (string-append "static double " regname "= " (number->string* (stx-e #'iv)) ";")))
        (with-syntax ((regname regname) (declreg declreg))
        #'(begin
            (begin-foreign
              (c-declare declreg))
-           (defsyntax name (make-register-info 'regname))))))))
+           (defsyntax name (make-register-info 'regname))))))
+    ((_ name)
+     #'(defregister name 0))))
 
 (defsyntax (register-ref stx)
   (syntax-case stx ()
@@ -173,18 +186,7 @@
         ([xid . rest-ids]
          (if (bound-identifier=? id xid)
            (car rest-args)
-           (loop rest-ids (cdr rest-args)))))))
-
-  (def (number->string* datum)
-    (let (str (number->string datum))
-      (cond
-       ((string-prefix? "." str)
-        (string-append "0" str))
-       ((string-prefix? "-." str)
-        (string-append "-0." (substring str 2 (string-length str))))
-       ((eqv? (string-ref str (1- (string-length str))) #\.)
-        (string-append str "0"))
-       (else str)))))
+           (loop rest-ids (cdr rest-args))))))))
 
 (defsyntax (fl!= stx)
   (syntax-case stx (@)

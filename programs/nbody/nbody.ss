@@ -35,7 +35,7 @@
 (defregister vz1)
 (defregister m1)
 (defregister m2)
-(defregister dt)
+(defregister dt .01)
 
 ;; the celestial body
 (defstruct body (x y z vx vy vz mass))
@@ -79,8 +79,7 @@
              (else (loop rest))))))
       (else (register-ref e)))))
 
-(def (advance! system delta)
-  (fl!= dt delta)
+(def (advance! system)
   (let loop ((rest system))
     (match rest
       ([hd . rest]
@@ -168,6 +167,6 @@
         (system (system-init! [sun jupiter saturn uranus neptune])))
     (write-output-string (format "~0,9f~n" (energy system)))
     (for (i (in-range n))
-      (advance! system .01))
+      (advance! system))
     (write-output-string (format "~0,9f~n" (energy system)))
     (flush-output)))
