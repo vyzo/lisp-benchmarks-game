@@ -469,37 +469,41 @@
   (set! solution-count (+ solution-count 2)))
 
 (def (solve depth cell)
-  (let/cc return
-    (unless (>= solution-count max-solutions)
-      (while (not (= (fxand board (fxarithmetic-shift-left 1 cell)) 0))
-        (set! cell (+ cell 1)))
-
-      (let loop ((piece 0))
-        (when (< piece 10)
-          (let (piece-no-mask (fxarithmetic-shift-left 1 piece))
-            (if (= (fxand avail piece-no-mask) 0)
-              (loop (+ piece 1))
-              (begin
-                (set! avail (fxxor avail piece-no-mask))
-                (let ((max-rots (@@ piece-counts piece cell))
-                      (piece-mask (@@ pieces piece cell)))
-                  (for (rotation (in-range max-rots))
-                    (when (= (fxand board (@@ piece-mask rotation)) 0)
-                      (set! (@@ sol-nums depth) piece)
-                      (set! (@@ sol-masks depth) (@@ piece-mask rotation))
-                      (when (= depth 9)
-                        ;; Solution found!!!!!11!!ONE!
-                        (record-solution)
-                        (set! avail (fxxor avail piece-no-mask))
-                        (return))
-                      (set! board
-                        (fxior board (@@ piece-mask rotation)))
-                      (when (= (board-has-islands (@@ next-cell piece cell rotation)) 0)
-                        (solve (+ depth 1) (@@ next-cell piece cell rotation)))
-                      (set! board
-                        (fxxor board (@@ piece-mask rotation))))))
-                (set! avail (fxxor avail piece-no-mask))
-                (loop (+ piece 1))))))))))
+  (when (< solution-count max-solutions)
+    (while (not (= (fxand board (fxarithmetic-shift-left 1 cell)) 0))
+      (set! cell (+ cell 1)))
+    (let loop-piece ((piece 0))
+      (when (< piece 10)
+        (let (piece-no-mask (fxarithmetic-shift-left 1 piece))
+          (if (= (fxand avail piece-no-mask) 0)
+            (loop-piece (+ piece 1))
+            (begin
+              (set! avail (fxxor avail piece-no-mask))
+              (let ((max-rots (@@ piece-counts piece cell))
+                    (piece-mask (@@ pieces piece cell)))
+                (let loop-rot ((rotation 0))
+                  (if (< rotation max-rots)
+                    (if (= (fxand board (@@ piece-mask rotation)) 0)
+                      (begin
+                        (set! (@@ sol-nums depth) piece)
+                        (set! (@@ sol-masks depth) (@@ piece-mask rotation))
+                        (if (= depth 9)
+                          ;; Solution found!!!!!11!!ONE!
+                          (begin
+                            (record-solution)
+                            (set! avail (fxxor avail piece-no-mask)))
+                          (begin
+                            (set! board
+                              (fxior board (@@ piece-mask rotation)))
+                            (when (= (board-has-islands (@@ next-cell piece cell rotation)) 0)
+                              (solve (+ depth 1) (@@ next-cell piece cell rotation)))
+                            (set! board
+                              (fxxor board (@@ piece-mask rotation)))
+                            (loop-rot (+ rotation 1)))))
+                      (loop-rot (+ rotation 1)))
+                    (begin
+                      (set! avail (fxxor avail piece-no-mask))
+                      (loop-piece (+ piece 1)))))))))))))
 
 ;; pretty print a board in the specified hexagonal format
 (def (pretty b)
