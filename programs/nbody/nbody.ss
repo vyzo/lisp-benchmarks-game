@@ -92,17 +92,12 @@
                 (fl!= b2.vz (+ b2.vz (* dz b.mass mag)))
 
                 (loop-inner rest-inner)))
-             (else (loop rest))))))
-      (else
-       (let loop ((rest system))
-         (match rest
-           ([hd . rest]
-            (using (b hd :- body)
+             (else
               (fl!= b.x (+ b.x (* dt b.vx)))
               (fl!= b.y (+ b.y (* dt b.vy)))
               (fl!= b.z (+ b.z (* dt b.vz)))
-              (loop rest)))
-           (else (void))))))))
+              (loop rest))))))
+      (else (void)))))
 
 (def jupiter
   (body (fl!  4.84143144246472090e+00)
