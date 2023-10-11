@@ -117,10 +117,11 @@
               (fl!= b.x (+ x1 (* dt vx1)))
               (fl!= b.y (+ y1 (* dt vy1)))
               (fl!= b.z (+ z1 (* dt vz1)))
-              (fl!= b.vx vx1)
-              (fl!= b.vy vy1)
-              (fl!= b.vz vz1)
-              (loop rest))))))
+              (unless (null? rest)
+                (fl!= b.vx vx1)
+                (fl!= b.vy vy1)
+                (fl!= b.vz vz1)
+                (loop rest)))))))
       (else (void)))))
 
 (def jupiter
