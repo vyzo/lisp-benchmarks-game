@@ -17,6 +17,7 @@
 (include "io.ss")
 (include "flonum.ss")
 
+;; floating point registers
 (defregister px)
 (defregister py)
 (defregister pz)
@@ -26,7 +27,16 @@
 (defregister dz)
 (defregister dist)
 (defregister mag)
+(defregister x1)
+(defregister y1)
+(defregister z1)
+(defregister vx1)
+(defregister vy1)
+(defregister vz1)
+(defregister m1)
+(defregister m2)
 
+;; the celestial body
 (defstruct body (x y z vx vy vz mass))
 
 (def pi 3.141592653589793)
@@ -73,29 +83,42 @@
     (match rest
       ([hd . rest]
        (using (b hd :- body)
+         ;; load the registers
+         (fl!= x1 b.x)
+         (fl!= y1 b.y)
+         (fl!= z1 b.z)
+         (fl!= vx1 b.vx)
+         (fl!= vy1 b.vy)
+         (fl!= vz1 b.vz)
+         (fl!= m1 b.mass)
          (let loop-inner ((rest-inner rest))
            (match rest-inner
              ([hd . rest-inner]
               (using (b2 hd :- body)
-                (fl!= dx (- b.x b2.x))
-                (fl!= dy (- b.y b2.y))
-                (fl!= dz (- b.z b2.z))
+                (fl!= m2 b2.mass)
+                (fl!= dx (- x1 b2.x))
+                (fl!= dy (- y1 b2.y))
+                (fl!= dz (- z1 b2.z))
                 (fl!= dist (+ (^2 dx) (^2 dy) (^2 dz)))
                 (fl!= mag (/ dt (* dist (sqrt dist))))
 
-                (fl!= b.vx (- b.vx (* dx b2.mass mag)))
-                (fl!= b.vy (- b.vy (* dy b2.mass mag)))
-                (fl!= b.vz (- b.vz (* dz b2.mass mag)))
+                (fl!= vx1 (- vx1 (* dx m2 mag)))
+                (fl!= vy1 (- vy1 (* dy m2 mag)))
+                (fl!= vz1 (- vz1 (* dz m2 mag)))
 
-                (fl!= b2.vx (+ b2.vx (* dx b.mass mag)))
-                (fl!= b2.vy (+ b2.vy (* dy b.mass mag)))
-                (fl!= b2.vz (+ b2.vz (* dz b.mass mag)))
+                (fl!= b2.vx (+ b2.vx (* dx m1 mag)))
+                (fl!= b2.vy (+ b2.vy (* dy m1 mag)))
+                (fl!= b2.vz (+ b2.vz (* dz m1 mag)))
 
                 (loop-inner rest-inner)))
              (else
-              (fl!= b.x (+ b.x (* dt b.vx)))
-              (fl!= b.y (+ b.y (* dt b.vy)))
-              (fl!= b.z (+ b.z (* dt b.vz)))
+              ;; store the registers back to the object
+              (fl!= b.x (+ x1 (* dt vx1)))
+              (fl!= b.y (+ y1 (* dt vy1)))
+              (fl!= b.z (+ z1 (* dt vz1)))
+              (fl!= b.vx vx1)
+              (fl!= b.vy vy1)
+              (fl!= b.vz vz1)
               (loop rest))))))
       (else (void)))))
 
