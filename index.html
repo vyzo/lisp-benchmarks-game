@@ -1,16 +1,16 @@
 <html>
   <head><title>The LISP Benchmark Game</title></head>
 <body>
-  <h2>Benchmarks for Gerbil, Racket, Go, and GCC</h2>
+  <h2>Benchmark Games for Gerbil, Racket, Go, and GCC</h2>
   <p>This is based on the now defunct Programming Language Shootout, aka The Benchmark Games.
-  <p> I run the tests with Gerbil v0.18-rc1, and compared with Racket, Go, and GCC.
+  <p> I run the tests with Gerbil, and compared with Racket, Go, and GCC.
   <p> Versions used: <b>Gerbil v0.18-rc1</b>, <b>Racket v8.2</b>, <b>Go 1.21.2</b>, and <b>GCC 11.4</b>
   <p>The source code for the benchmark game is at <a href="https://github.com/vyzo/lisp-benchmarks-game/">here</a>.
 
 
   <p>The benchmarks were run on a Dell XPS 13-9320 laptop.
   <p>Each benchmark was run 3 times, and I kept the best value.
-  <p><b>Note</b> Some benchmarks have a finit small input, and take 0 time to complete (less than the 10ms resolution of /usr/bin/time; so they are not included here, as they are pointless.
+  <p><b>Note</b> Some benchmarks have a finite small input, and take 0 time to complete (less than the 10ms resolution of /usr/bin/time); so they are not included here, as they are pointless.
   <p><b>Note</b> With the exception of chameneosredux and threadring, the other benchmark all utilize a single core. I want to compare apples to apples, not how well a given language can multicore.
   <p><b>Note</b> In the chameneosredux, Go and GCC produce non-deterministic output.
   <p><b>Note</b>This is not a d*ck swinging contest. I compiled these results to see
