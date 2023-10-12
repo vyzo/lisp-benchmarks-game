@@ -19,7 +19,7 @@
   (let loop ()
     (let ((v (thread-receive)))
       (cond
-       ((zero? v) ;; Done
+       ((= v 0) ;; Done
         (write-output-string (number->string id))
         (write-output-newline)
         (flush-output)
