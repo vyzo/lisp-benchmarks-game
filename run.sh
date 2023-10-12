@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -e
 
 target=$1
 program=$2
@@ -14,7 +14,7 @@ compile_go() {
 }
 
 compile_gerbil() {
-    gxc -exe -o ${program}-gerbil -O ${program}.ss
+    gxc -exe -o ${program}-gerbil -O ${GERBILLIBS} ${program}.ss
 }
 
 compile_gerbil_fpo() {
@@ -23,7 +23,7 @@ compile_gerbil_fpo() {
 
 compile_gcc() {
     cp ${program}.gcc ${program}.c
-    gcc -O2 -o ${program}-gcc ${program}.c -lm
+    gcc -O2 -o ${program}-gcc ${program}.c -lm ${GCCLIBS}
 }
 
 check() {
@@ -38,6 +38,9 @@ run_it() {
     case $target in
         gcc)
             check ${program}.gcc
+            if [ -e gcc.libs ]; then
+                . ./gcc.libs
+            fi
             compile=compile_gcc
             run="./${program}-gcc"
             ;;
@@ -53,6 +56,9 @@ run_it() {
             ;;
         gerbil)
             check ${program}.ss
+            if [ -e gerbil.libs ]; then
+                . ./gerbil.libs
+            fi
             compile=compile_gerbil
             run="./${program}-gerbil"
             ;;
