@@ -44,7 +44,8 @@
                       (not even-parity?)))))))))))
 
 (def (count-flips pi rho)
-  (vector-copy! rho 0 pi)
+  (for (i (in-range (vector-length pi)))
+    (vector-set! rho i (vector-ref pi i)))
   (let loop ((i 0))
     (if (= (vector-ref rho 0) 0)
         i
