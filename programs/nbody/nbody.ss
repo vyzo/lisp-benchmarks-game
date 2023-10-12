@@ -1,7 +1,7 @@
 ;;; -*- Gerbil -*-
 ;;; © vyzo
 ;;; mandelbrot program from Computer Language Benchmarks Game
-;;; directly ported from the go version
+;;; ported from the go version and optimized
 (import :std/error
         :std/sugar
         :std/contract
