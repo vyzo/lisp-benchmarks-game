@@ -16,16 +16,17 @@
 (include "io.ss")
 
 (def (run id next)
-  (let ((v (thread-receive)))
-    (cond
-     ((zero? v) ;; Done
-      (write-output-string (number->string id))
-      (write-output-newline)
-      (flush-output)
-      (exit))
-     (else ;; Keep going
-      (thread-send next (- v 1))
-      (run id next)))))
+  (let loop ()
+    (let ((v (thread-receive)))
+      (cond
+       ((zero? v) ;; Done
+        (write-output-string (number->string id))
+        (write-output-newline)
+        (flush-output)
+        (exit))
+       (else ;; Keep going
+        (thread-send next (- v 1))
+        (loop))))))
 
 (def (main n)
   (let* ((n (string->number n))
