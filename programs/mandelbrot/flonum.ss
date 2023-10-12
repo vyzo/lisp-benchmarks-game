@@ -14,12 +14,23 @@
   (def (mangle-char char)
     (case char
       ((#\- #\/ #\# #\! #\@ #\$ #\% #\^ #\& #\*) #\_)
-      (else char))))
+      (else char)))
+  (def (number->string* datum)
+    (let (str (number->string datum))
+      (cond
+       ((string-prefix? "." str)
+        (string-append "0" str))
+       ((string-prefix? "-." str)
+        (string-append "-0." (substring str 2 (string-length str))))
+       ((eqv? (string-ref str (1- (string-length str))) #\.)
+        (string-append str "0"))
+       (else str)))))
 
 (defsyntax (defregister stx)
   (syntax-case stx ()
-    ((_ name)
+    ((_ name iv)
      (and (identifier? #'name)
+          (stx-number? #'iv)
           (module-context? (current-expander-context)))
      (let* ((regname
              (cond
@@ -28,12 +39,14 @@
               (else
                (mangle (symbol->string (stx-e #'name))))))
             (declreg
-             (string-append "static double " regname "= 0;")))
+             (string-append "static double " regname "= " (number->string* (stx-e #'iv)) ";")))
        (with-syntax ((regname regname) (declreg declreg))
        #'(begin
            (begin-foreign
              (c-declare declreg))
-           (defsyntax name (make-register-info 'regname))))))))
+           (defsyntax name (make-register-info 'regname))))))
+    ((_ name)
+     #'(defregister name 0))))
 
 (defsyntax (register-ref stx)
   (syntax-case stx ()
@@ -42,6 +55,16 @@
           (register-info? (syntax-local-value #'name)))
      (let* ((regvar (register-info-var (syntax-local-value #'name false)))
             (c-code (string-append "___RESULT= ___F64BOX(" regvar ");")))
+       (with-syntax ((c-code c-code))
+         #'(##c-code c-code))))))
+
+(defsyntax (register-ref-fixnum stx)
+  (syntax-case stx ()
+    ((_ name)
+     (and (identifier? #'name)
+          (register-info? (syntax-local-value #'name)))
+     (let* ((regvar (register-info-var (syntax-local-value #'name false)))
+            (c-code (string-append "___RESULT= ___FIX(((int)" regvar "));")))
        (with-syntax ((c-code c-code))
          #'(##c-code c-code))))))
 
@@ -163,7 +186,7 @@
       ((@ f64v offset)
        (let ((f64v-arg (identifier-argument #'f64v ids args))
              (offset-arg (if (stx-number? #'offset)
-                           (number->string (stx-e #'offset))
+                           (string-append "___FIX(" (number->string (stx-e #'offset)) ")")
                            (identifier-argument #'offset ids args))))
          (string-append "___F64VECTORREF(" f64v-arg "," offset-arg ")")))))
 
@@ -173,18 +196,7 @@
         ([xid . rest-ids]
          (if (bound-identifier=? id xid)
            (car rest-args)
-           (loop rest-ids (cdr rest-args)))))))
-
-  (def (number->string* datum)
-    (let (str (number->string datum))
-      (cond
-       ((string-prefix? "." str)
-        (string-append "0" str))
-       ((string-prefix? "-." str)
-        (string-append "-0." (substring str 2 (string-length str))))
-       ((eqv? (string-ref str (1- (string-length str))) #\.)
-        (string-append str "0"))
-       (else str)))))
+           (loop rest-ids (cdr rest-args))))))))
 
 (defsyntax (fl!= stx)
   (syntax-case stx (@)
@@ -207,14 +219,24 @@
      (and (identifier? #'f64v)
           (or (identifier? #'offset)
               (stx-number? #'offset)))
-     (with-syntax* (((id ...) (collect-arguments #'expr))
-                    ((arg ...) (make-c-code-arguments #'(id ...) 3))
-                    (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
-                    (c-code (string-append
-                             "___F64VECTORSET(___ARG1, ___ARG2,"
-                             (stx-e #'c-code)
-                             "); ___RESULT = ___VOID;")))
-       #'(##c-code c-code f64v offset id ...)))))
+     (with-syntax (((id ...) (collect-arguments #'expr)))
+       (if (identifier? #'offset)
+         (with-syntax* (((arg ...) (make-c-code-arguments #'(id ...) 3))
+                        (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
+                        (c-code
+                         (string-append "___F64VECTORSET(___ARG1, ___ARG2,"
+                                        (stx-e #'c-code)
+                                        "); ___RESULT = ___VOID;")))
+           #'(##c-code c-code f64v offset id ...))
+         (with-syntax* (((arg ...) (make-c-code-arguments #'(id ...) 2))
+                        (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
+                        (c-code
+                         (string-append "___F64VECTORSET(___ARG1, ___FIX("
+                                        (number->string (stx-e #'offset))
+                                        "),"
+                                        (stx-e #'c-code)
+                                        "); ___RESULT = ___VOID;")))
+           #'(##c-code c-code f64v id ...)))))))
 
 (defsyntax (fl!? stx)
   (syntax-case stx ()
