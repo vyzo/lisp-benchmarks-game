@@ -58,6 +58,16 @@
        (with-syntax ((c-code c-code))
          #'(##c-code c-code))))))
 
+(defsyntax (register-ref-fixnum stx)
+  (syntax-case stx ()
+    ((_ name)
+     (and (identifier? #'name)
+          (register-info? (syntax-local-value #'name)))
+     (let* ((regvar (register-info-var (syntax-local-value #'name false)))
+            (c-code (string-append "___RESULT= ___FIX(((int)" regvar "));")))
+       (with-syntax ((c-code c-code))
+         #'(##c-code c-code))))))
+
 (def (make-flonum)
   (##c-code "___RESULT= ___F64BOX(0);"))
 
