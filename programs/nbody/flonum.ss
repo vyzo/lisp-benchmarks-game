@@ -186,7 +186,7 @@
       ((@ f64v offset)
        (let ((f64v-arg (identifier-argument #'f64v ids args))
              (offset-arg (if (stx-number? #'offset)
-                           (number->string (stx-e #'offset))
+                           (string-append "___FIX(" (number->string (stx-e #'offset)) ")")
                            (identifier-argument #'offset ids args))))
          (string-append "___F64VECTORREF(" f64v-arg "," offset-arg ")")))))
 
@@ -219,14 +219,24 @@
      (and (identifier? #'f64v)
           (or (identifier? #'offset)
               (stx-number? #'offset)))
-     (with-syntax* (((id ...) (collect-arguments #'expr))
-                    ((arg ...) (make-c-code-arguments #'(id ...) 3))
-                    (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
-                    (c-code (string-append
-                             "___F64VECTORSET(___ARG1, ___ARG2,"
-                             (stx-e #'c-code)
-                             "); ___RESULT = ___VOID;")))
-       #'(##c-code c-code f64v offset id ...)))))
+     (with-syntax (((id ...) (collect-arguments #'expr)))
+       (if (identifier? #'offset)
+         (with-syntax* (((arg ...) (make-c-code-arguments #'(id ...) 3))
+                        (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
+                        (c-code
+                         (string-append "___F64VECTORSET(___ARG1, ___ARG2,"
+                                        (stx-e #'c-code)
+                                        "); ___RESULT = ___VOID;")))
+           #'(##c-code c-code f64v offset id ...))
+         (with-syntax* (((arg ...) (make-c-code-arguments #'(id ...) 2))
+                        (c-code (expand-expr #'expr #'(id ...) #'(arg ...)))
+                        (c-code
+                         (string-append "___F64VECTORSET(___ARG1, ___FIX("
+                                        (number->string (stx-e #'offset))
+                                        "),"
+                                        (stx-e #'c-code)
+                                        "); ___RESULT = ___VOID;")))
+           #'(##c-code c-code f64v id ...)))))))
 
 (defsyntax (fl!? stx)
   (syntax-case stx ()
