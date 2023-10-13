@@ -15,7 +15,6 @@
   <p>The benchmarks were run on a Dell XPS 13-9320 laptop.
   <p>Each benchmark was run 3 times, and I kept the best value.
   <p><b>Note</b> C programs were compiled with <code>gcc -O2</code>.
-  <p><b>Note</b> Some benchmarks have a fixed small input, and take 0 time to complete (less than the 10ms resolution of /usr/bin/time); so they are not included here, as they are pointless.
   <p><b>Note</b> The benchmark all utilize a <b>single core</b>. I want to compare apples to apples, not how well a given language can multicore. Gerbil is also multicore capable, but the SMP backend is not stable yet; when it is, it will be time for Gerbil v1.0.
     <br>
     For C, I also kept the versions that don't utilize architecture specific extensions, as these are not generally portable and don't even compile on my laptop. I want reproducible benchmarks, not something bogus that relies on a specific Intel chip.
