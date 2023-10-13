@@ -1,9 +1,10 @@
 /*
  * The Computer Language Benchmarks Game
- * http://benchmarksgame.alioth.debian.org/
+ * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
  *
  * contributed by Oleg Mazurov, June 2010
  * flag.Arg hack by Isaac Gouy
+ * Stack allocation and atomic synchronization by Jan Pfeifer (2020)
  *
  */
 
@@ -12,24 +13,31 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	//"runtime"
 	"strconv"
+	"sync/atomic"
 )
 
-type Result struct {
-	maxFlips int
-	checkSum int
-}
+// Constant maximum size for N. Compile time known value allow us to allocate
+// arrays in stack. It helps making it multiple of 64bits and memory aligned
+// (hence 16).
+const MAX_N = 16
 
 var (
 	NCHUNKS = 720
 	CHUNKSZ = 0
 	NTASKS  = 0
+
+	n    = 12
+	Fact []int
+
+	// Accumulated results.
+	res = int64(0)
+	chk = int64(0)
 )
-var n = 12
-var Fact []int
 
-func fannkuch(idxMin int, ch chan Result) {
-
+func fannkuch(idxMin int, ch chan bool) {
 	idxMax := idxMin + CHUNKSZ
 	if idxMax < Fact[n] {
 		go fannkuch(idxMax, ch)
@@ -37,11 +45,10 @@ func fannkuch(idxMin int, ch chan Result) {
 		idxMax = Fact[n]
 	}
 
-	p := make([]int, n)
-	pp := make([]int, n)
-	count := make([]int, n)
+	// Stack allocation.
+	var p, pp, count [MAX_N]int
 
-	// first permutation
+	// First permutation.
 	for i := 0; i < n; i++ {
 		p[i] = i
 	}
@@ -50,7 +57,7 @@ func fannkuch(idxMin int, ch chan Result) {
 		count[i] = d
 		idx = idx % Fact[i]
 
-		copy(pp, p)
+		copy(pp[:], p[:]) // One could copy only p[:n], but it is slower.
 		for j := 0; j <= i; j++ {
 			if j+d <= i {
 				p[j] = pp[j+d]
@@ -65,12 +72,12 @@ func fannkuch(idxMin int, ch chan Result) {
 
 	for idx, sign := idxMin, true; ; sign = !sign {
 
-		// count flips
+		// Count flips.
 		first := p[0]
 		if first != 0 {
 			flips := 1
 			if p[first] != 0 {
-				copy(pp, p)
+				copy(pp[:], p[:])
 				p0 := first
 				for {
 					flips++
@@ -99,7 +106,7 @@ func fannkuch(idxMin int, ch chan Result) {
 			break
 		}
 
-		// next permutation
+		// Next permutation.
 		if sign {
 			p[0], p[1] = p[1], first
 		} else {
@@ -118,18 +125,28 @@ func fannkuch(idxMin int, ch chan Result) {
 		}
 	}
 
-	ch <- Result{maxFlips, checkSum}
+	// Atomic update.
+	atomic.AddInt64(&chk, int64(checkSum))
+	newFlips := int64(maxFlips)
+	for newFlips > res {
+		newFlips = atomic.SwapInt64(&res, newFlips)
+	}
+	ch <- true
 }
 
-func printResult(n int, res int, chk int) {
+func printResult(n int, res int64, chk int64) {
 	fmt.Printf("%d\nPfannkuchen(%d) = %d\n", chk, n, res)
 }
 
 func main() {
 	flag.Parse()
-	if flag.NArg() > 0 {
+	if flag.NArg() == 1 {
 		n, _ = strconv.Atoi(flag.Arg(0))
 	}
+	if n > MAX_N {
+		log.Fatalf("Max value accepted for N: %d", MAX_N)
+	}
+	//runtime.GOMAXPROCS(4)
 
 	Fact = make([]int, n+1)
 	Fact[0] = 1
@@ -141,18 +158,12 @@ func main() {
 	CHUNKSZ += CHUNKSZ % 2
 	NTASKS = (Fact[n] + CHUNKSZ - 1) / CHUNKSZ
 
-	ch := make(chan Result, NTASKS)
-
+	ch := make(chan bool, NTASKS)
 	go fannkuch(0, ch)
 
-	res := 0
-	chk := 0
+	// Wait for all results to be calculated.
 	for i := 0; i < NTASKS; i++ {
-		r := <-ch
-		if res < r.maxFlips {
-			res = r.maxFlips
-		}
-		chk += r.checkSum
+		<-ch
 	}
 
 	printResult(n, res, chk)

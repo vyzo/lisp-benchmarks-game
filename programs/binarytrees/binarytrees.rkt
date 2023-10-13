@@ -1,56 +1,55 @@
 #lang racket/base
 
 ;;; The Computer Language Benchmarks Game
-;;; http://benchmarksgame.alioth.debian.org/
+;;; https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
 
 ;;; Derived from the Chicken variant by Sven Hartrumpf
 ;;; contributed by Matthew Flatt
 ;;; *reset*
+;;; improved by Phil Nguyen:
+;;; - use `cons` instead of struct `node`
+;;; - remove the confirmed unneccessary field `val`
+;;; - accumulate part of `check`
+;;; - use unsafe accessors and fixnum arithmetics
+;;; - clean up with `define` instead of nested `let`
+;;; - clean up with `for/sum` instead of `for/fold`
 
 (require racket/cmdline)
 
-(struct node (left val right))
+#;(struct node (left right))
+(define node cons)
+(require (rename-in racket/unsafe/ops
+                    [unsafe-car node-left]
+                    [unsafe-cdr node-right]
+                    [unsafe-fx+ +]
+                    [unsafe-fx- -]
+                    [unsafe-fx= =]))
 
-;; Instead of (define-struct leaf (val)):
-(define (leaf val) (node #f val #f))
-(define (leaf? l) (not (node-left l)))
-(define (leaf-val l) (node-val l))
-
-(define (make item d)
+(define (make d)
   (if (= d 0)
-      (leaf item)
-      (let ((item2 (* item 2))
-            (d2 (- d 1)))
-        (node (make (- item2 1) d2) 
-              item 
-              (make item2 d2)))))
+      (node #f #f)
+      (let ([d2 (- d 1)])
+        (node (make d2) (make d2)))))
 
 (define (check t)
-  (if (leaf? t)
-      1
-      (+ 1 (+ (check (node-left t)) 
-                         (check (node-right t))))))
+  (let sum ([t t] [acc 0])
+    (cond [(node-left t) (sum (node-right t) (sum (node-left t) (+ 1 acc)))]
+          [else          (+ 1 acc)])))
 
 (define (main n)
-  (let* ((min-depth 4)
-         (max-depth (max (+ min-depth 2) n)))
-    (let ((stretch-depth (+ max-depth 1)))
-      (printf "stretch tree of depth ~a\t check: ~a\n"
-              stretch-depth
-              (check (make 0 stretch-depth))))
-    (let ((long-lived-tree (make 0 max-depth)))
-      (for ((d (in-range 4 (add1 max-depth) 2)))
-        (let ((iterations (arithmetic-shift 1 (+ (- max-depth d) min-depth))))
-          (printf "~a\t trees of depth ~a\t check: ~a\n"
-                  iterations
-                  d
-                  (for/fold ([c 0])
-                            ([i (in-range iterations)])
-                    (+ c 
-                       (check (make i d)) )))))
-      (printf "long lived tree of depth ~a\t check: ~a\n"
-              max-depth
-              (check long-lived-tree)))))
+  (define min-depth 4)
+  (define max-depth (max (+ min-depth 2) n))
+  (define stretch-depth (+ max-depth 1))
+  (printf "stretch tree of depth ~a\t check: ~a\n" stretch-depth (check (make stretch-depth)))
+  (define long-lived-tree (make max-depth))
+  (for ([d (in-range 4 (add1 max-depth) 2)])
+    (define iterations (arithmetic-shift 1 (+ (- max-depth d) min-depth)))
+    (printf "~a\t trees of depth ~a\t check: ~a\n"
+            iterations
+            d
+            (for/sum ([_ (in-range iterations)])
+              (check (make d)))))
+  (printf "long lived tree of depth ~a\t check: ~a\n" max-depth (check long-lived-tree)))
 
-(command-line #:args (n) 
+(command-line #:args (n)
               (main (string->number n)))

@@ -6,16 +6,13 @@
         :std/misc/ports)
 
 (def games
-  '("binarytrees"
-    "chameneosredux"
-    "fannkuchredux"
-    "fasta"
-    "fastaredux"
-    "mandelbrot"
+  '("fannkuchredux"
     "nbody"
-    "pidigits"
     "spectralnorm"
-    "threadring"))
+    "mandelbrot"
+    "pidigits"
+    "fasta"
+    "binarytrees"))
 
 (def players
   '("racket" "go" "gcc" "gerbil"))

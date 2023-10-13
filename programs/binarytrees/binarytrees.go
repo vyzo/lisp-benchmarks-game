@@ -1,65 +1,99 @@
 /* The Computer Language Benchmarks Game
- * http://benchmarksgame.alioth.debian.org/
+ * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
  *
- * contributed by The Go Authors.
- * based on C program by Kevin Carson
- * flag.Arg hack by Isaac Gouy
- * *reset*
+ * based on Go #7 program by Anthony Perez-Sanz
+ * modified by Isaac Gouy to use sync.Pool
  */
 
 package main
 
 import (
-   "flag"
-   "fmt"
-   "strconv"
+	"flag"
+	"fmt"
+	"strconv"
+	"sync"
 )
 
-var n = 0
-
 type Node struct {
-     left, right   *Node
+	left, right *Node
 }
 
-func  bottomUpTree(depth int) *Node {
-   if depth <= 0 {
-      return &Node{}
-   }
-   return &Node{ bottomUpTree(depth-1), bottomUpTree(depth-1) }
-}
-
-func (n *Node) itemCheck() int {
-   if n.left == nil {
-      return 1
-   }
-   return 1 + n.left.itemCheck() + n.right.itemCheck()
+var pool = sync.Pool{
+	New: func() interface{} {
+		return &Node{}
+	},
 }
 
 const minDepth = 4
 
+func trees(maxDepth int) {
+	longLastingNode := createTree(maxDepth)
+	depth := 4
+
+	for depth <= maxDepth {
+		iterations := 1 << uint(maxDepth-depth+minDepth) // 16 << (maxDepth - depth)
+
+		loops(iterations, depth)
+		depth += 2
+	}
+	fmt.Printf("long lived tree of depth %d\t check: %d\n", maxDepth,
+		checkTree(longLastingNode))
+}
+
+func loops(iterations, depth int) {
+	check := 0
+	item := 0
+	for item < iterations {
+		t := createTree(depth)
+		check += checkTree(t)
+		pool.Put(t)
+		item++
+	}
+	fmt.Printf("%d\t trees of depth %d\t check: %d\n",
+		iterations, depth, check)
+}
+
+func checkTree(n *Node) int {
+	if n.left == nil {
+		// parent will sync.Pool.Put
+		return 1
+	}
+	check := checkTree(n.left) + checkTree(n.right) + 1
+	pool.Put(n.left)
+	n.left = nil
+	pool.Put(n.right)
+	n.right = nil
+	return check
+}
+
+func createTree(depth int) *Node {
+	node := pool.Get().(*Node)
+	if depth > 0 {
+		depth--
+		node.left = createTree(depth)
+		node.right = createTree(depth)
+	}
+	return node
+}
+
 func main() {
-   flag.Parse()
-   if flag.NArg() > 0 { n,_ = strconv.Atoi( flag.Arg(0) ) }
+	n := 0
+	flag.Parse()
+	if flag.NArg() > 0 {
+		n, _ = strconv.Atoi(flag.Arg(0))
+	}
 
-   maxDepth := n
-   if minDepth + 2 > n {
-      maxDepth = minDepth + 2
-   }
-   stretchDepth := maxDepth + 1
+	maxDepth := n
+	if minDepth+2 > n {
+		maxDepth = minDepth + 2
+	}
 
-   check := bottomUpTree(stretchDepth).itemCheck()
-   fmt.Printf("stretch tree of depth %d\t check: %d\n", stretchDepth, check)
-
-   longLivedTree := bottomUpTree(maxDepth)
-
-   for depth := minDepth; depth <= maxDepth; depth+=2 {
-      iterations := 1 << uint(maxDepth - depth + minDepth)
-      check = 0
-
-      for i := 1; i <= iterations; i++ {
-         check += bottomUpTree(depth).itemCheck()
-      }
-      fmt.Printf("%d\t trees of depth %d\t check: %d\n", iterations, depth, check)
-   }
-   fmt.Printf("long lived tree of depth %d\t check: %d\n", maxDepth, longLivedTree.itemCheck())
+	{
+		stretchDepth := maxDepth + 1
+		t := createTree(stretchDepth)
+		check := checkTree(t)
+		pool.Put(t)
+		fmt.Printf("stretch tree of depth %d\t check: %d\n", stretchDepth, check)
+	}
+	trees(maxDepth)
 }
