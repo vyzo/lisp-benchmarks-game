@@ -5,13 +5,15 @@
 (import :std/iter
         :std/sugar
         :std/os/fdio
-        :std/text/utf8)
+        :std/text/utf8
+        :gerbil/gambit)
 (export main)
 (declare
   (not safe)
   (fixnum))
 (include "io.ss")
 (include "int.ss")
+(include "flonum.ss")
 
 (def +alu+
   (string-append
@@ -35,35 +37,45 @@
 (def IA 3877)
 (def IC 29573)
 (def IM 139968)
-(def SCALE-BITS 28)
-(def SCALE (expt 2 SCALE-BITS))
-(def SCALE-fl (fixnum->flonum SCALE))
 (def +seed+ 42)
 (def (random-next!)
   (set! +seed+ (% (+ IC (* +seed+ IA)) IM))
-  (// (* +seed+ SCALE) IM))
+  +seed+)
 
+(defregister cumulative)
 (def (make-cumulative-table frequency-table)
-  (let* ((cumulative 0)
-         (len (length frequency-table))
-         (result (make-vector len))
-         (chars  (make-string len)))
+  (fl!= cumulative 0)
+  (let* ((len   (length frequency-table))
+         (cdf   (make-f64vector len))
+         (chars (make-string len)))
     (for ((x frequency-table)
           (i (in-range len)))
-      (set! cumulative (+ cumulative (##flonum->fixnum (fl* SCALE-fl (cdr x)))))
-      (vector-set! result i cumulative)
+      (let (xx (cdr x))
+        (fl!= cumulative (+ cumulative (* xx (->fl IM))))
+        (fl!= (@ cdf i) cumulative))
       (string-set! chars  i (car x)))
-    (cons result chars)))
+    (cons cdf chars)))
 
+(defregister random)
 (def (select-random cumulative-table)
   (declare (not interrupts-enabled))
-  (let ((table (car cumulative-table))
+  (let ((cdf (car cumulative-table))
         (chars (cdr cumulative-table))
-        (rand  (random-next!)))
+        (rand (random-next!)))
+    (fl!= random (->fl rand))
     (let loop ((i 0))
-      (if (<= rand (vector-ref table i))
+      (if (fl!? <= random (@ cdf i))
         (string-ref chars i)
         (loop (+ i 1))))))
+
+(def (random-fasta head n cumulative-table)
+  (write-output-line head)
+  (let ((n n))
+    (while (> n 0)
+      (for (_ (in-range (min n +line-size+)))
+        (write-output-char (select-random cumulative-table)))
+      (write-output-newline)
+      (set! n (- n +line-size+)))))
 
 (def (repeat-fasta head n sequence)
   (let (seqlen (string-length sequence))
@@ -79,15 +91,6 @@
               (begin
                 (write-output-newline)
                 (loop-o (- n +line-size+) k)))))))))
-
-(def (random-fasta head n cumulative-table)
-  (write-output-line head)
-  (let ((n n))
-    (while (> n 0)
-      (for (_ (in-range (min n +line-size+)))
-        (write-output-char (select-random cumulative-table)))
-      (write-output-newline)
-      (set! n (- n +line-size+)))))
 
 (def +line-size+ 60)
 
