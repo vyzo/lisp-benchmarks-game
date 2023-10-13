@@ -42,10 +42,10 @@
 (defmake make-right! cdr)
 
 (def (check t)
-  (if (leaf? t)
-    1
-    (+ 1 (+ (check (car t))
-            (check (cdr t))))))
+  (let loop ((t t) (r 0))
+    (if (leaf? t)
+      (+ r 1)
+      (loop (car t) (loop (cdr t) (+ r 1))))))
 
 (def (main n)
   (let* ((n (string->number n))
