@@ -14,6 +14,7 @@
   (not safe)
   (fixnum))
 (include "io.ss")
+(include "int.ss")
 (include "vector.ss")
 
 (def max-solutions 0)
