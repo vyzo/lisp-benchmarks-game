@@ -12,8 +12,7 @@
   (fixnum))
 (include "int.ss")
 
-(defstruct node (left right) final: #t)
-
+(defalias node cons)
 (defrule (new)
   (node #f #f))
 
@@ -29,27 +28,24 @@
         (make-right! d2 n)
         n)))
 
-(defrule (defmake make! field)
-  (with-id ((n 'n) (target #'n "." 'field))
-    (def (make!  d n)
-      (using (n :- node)
-        (if (= d 0)
-          (set! target #f)
-          (let ((nn (new))
-                (d2 (- d 1)))
-            (set! target nn)
-            (make-left! d2 nn)
-            (make-right! d2 nn)))))))
+(defrule (defmake make! target)
+  (def (make!  d n)
+    (if (= d 0)
+      (set! (target n) #f)
+      (let ((nn (new))
+            (d2 (- d 1)))
+        (set! (target n) nn)
+        (make-left! d2 nn)
+        (make-right! d2 nn)))))
 
-(defmake make-left! left)
-(defmake make-right! right)
+(defmake make-left! car)
+(defmake make-right! cdr)
 
 (def (check t)
   (if (leaf? t)
     1
-    (using (t :- node)
-      (+ 1 (+ (check t.left)
-              (check t.right))))))
+    (+ 1 (+ (check (car t))
+            (check (cdr t))))))
 
 (def (main n)
   (let* ((n (string->number n))
