@@ -22,7 +22,7 @@
 (def (precompute-A! n)
   (let (A (make-vector (* 2 n)))
     (for (i (in-range n))
-      (for (j (in-range n))
+      (for (j (in-range i n))
         (let (i+j (+ i j))
           (let (val (+ (// (* i+j (+ i+j 1)) 2) 1))
             (vector-set! A i+j val)
