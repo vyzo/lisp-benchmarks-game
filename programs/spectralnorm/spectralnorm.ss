@@ -24,12 +24,12 @@
     (cond
      ((vector-ref +memo+ i+j))
      (else
-      (let (val (// (* i+j (+ i+j 1)) 2))
+      (let (val (+ (// (* i+j (+ i+j 1)) 2) 1))
         (vector-set! +memo+ i+j val)
         val)))))
 
 (def (eval-A i j)
-  (+ (memo i j) i 1))
+  (+ (memo i j) i))
 
 (defregister vi)
 (def (times v u)
