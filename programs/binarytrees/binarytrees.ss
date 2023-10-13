@@ -12,9 +12,8 @@
   (fixnum))
 (include "int.ss")
 
-(defalias node cons)
 (defrule (new)
-  (node #f #f))
+  (cons #f #f))
 
 (defrule (leaf? l)
   (not l))
