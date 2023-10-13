@@ -1,13 +1,22 @@
 #lang racket/base
 
 ;;; The Computer Language Benchmarks Game
-;;; http://benchmarksgame.alioth.debian.org/
+;;; https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
 
 ;;; Translated directly from the C# version by Isaac Gouy
 ;;; contributed by Matthew Flatt
 
+;; This version uses unsafe operations
+
 (require racket/cmdline
-         racket/flonum)
+	 racket/require (for-syntax racket/base)
+	 (rename-in
+          (filtered-in
+           (lambda (name) (regexp-replace #rx"unsafe-" name ""))
+           racket/unsafe/ops)
+          [fx->fl ->fl])
+         (only-in racket/flonum make-flvector))
+
 
 (define (Approximate n)
   (let ([u (make-flvector n 1.0)]
@@ -16,7 +25,7 @@
     (for ([i (in-range 10)])
       (MultiplyAtAv n u v)
       (MultiplyAtAv n v u))
-    
+
     ;; B=AtA         A multiplied by A transposed
     ;; v.Bv /(v.v)   eigenvalue of v
     (let loop ([i 0][vBv 0.0][vv 0.0])
@@ -30,13 +39,13 @@
 ;; return element i,j of infinite matrix A
 (define (A i j)
   (fl/ 1.0 (fl+ (fl* (->fl (+ i j))
-                     (fl/ (->fl (+ i (+ j 1))) 2.0)) 
+                     (fl/ (->fl (+ i (+ j 1))) 2.0))
                 (->fl (+ i 1)))))
 
 ;; multiply vector v by matrix A
 (define (MultiplyAv n v Av)
   (for ([i (in-range n)])
-    (flvector-set! Av i 
+    (flvector-set! Av i
                    (for/fold ([r 0.0])
                        ([j (in-range n)])
                      (fl+ r (fl* (A i j) (flvector-ref v j)))))))
@@ -49,7 +58,7 @@
                        ([j (in-range n)])
                      (fl+ r (fl* (A j i) (flvector-ref v j)))))))
 
-;; multiply vector v by matrix A and then by matrix A transposed 
+;; multiply vector v by matrix A and then by matrix A transposed
 (define (MultiplyAtAv n v AtAv)
   (let ([u (make-flvector n 0.0)])
     (MultiplyAv n v u)
@@ -59,4 +68,3 @@
         (real->decimal-string
          (Approximate (command-line #:args (n) (string->number n)))
          9))
-

@@ -2,9 +2,12 @@
   <head><title>The LISP Benchmark Game</title></head>
 <body>
   <h2>Benchmark Games for Gerbil, Racket, Go, and C (GCC)</h2>
-  <p>This is based on the now defunct Programming Language Shootout, aka The Benchmark Games.
+  <p>This was originally based on the now defunct Alioth Programming Language Shootout, aka The Benchmark Games.
+    Once I posted the site, it was brought to my attention that the Game is <i>still active</i>.
+    Mea culpa, I have updated the programs to use the latest programs from the official game site.
+    I picked the fastest program for each language; see notes below.
   <p> I run the tests with Gerbil, and compared with Racket, Go, and C.
-    The Gerbil programs are new, for the others I used the existing (expertly written and heavily optimized) programs from the <a href="https://github.com/Byron/benchmarksgame-cvs-mirror/tree/master/bench">Language Shootout Archive</a>.
+    The Gerbil programs are new, for the others I used the existing (expertly written and heavily optimized) programs from the <a href="https://benchmarksgame-team.pages.debian.net/benchmarksgame/index.html">23.03 Benchmarks Game</a>.
   <p> Versions used: <b>Gerbil v0.18</b>, <b>Racket v8.2</b>, <b>Go 1.21.2</b>, and <b>GCC 11.4</b>
   <p>The source code for the benchmark game is <a href="https://github.com/vyzo/lisp-benchmarks-game/">here</a>.
 
@@ -13,8 +16,10 @@
   <p>Each benchmark was run 3 times, and I kept the best value.
   <p><b>Note</b> C programs were compiled with <code>gcc -O2</code>.
   <p><b>Note</b> Some benchmarks have a fixed small input, and take 0 time to complete (less than the 10ms resolution of /usr/bin/time); so they are not included here, as they are pointless.
-  <p><b>Note</b> With the exception of chameneosredux and threadring, the other benchmark all utilize a single core. I want to compare apples to apples, not how well a given language can multicore.
-  <p><b>Note</b> In the chameneosredux, Go and GCC produce non-deterministic output.
+  <p><b>Note</b> The benchmark all utilize a <b>single core</b>. I want to compare apples to apples, not how well a given language can multicore. Gerbil is also multicore capable, but the SMP backend is not stable yet; when it is, it will be time for Gerbil v1.0.
+    <br>
+    For C, I also kept the versions that don't utilize architecture specific extensions, as these are not generally portable and don't even compile on my laptop. I want reproducible benchmarks, not something bogus that relies on a specific Intel chip extensions.
+    That means that _there may exist faster C_ programs out there, but they may or may not compile and run on any given machine, so I opted to stay portable.
   <p><b>Note</b>This is not a d*ck swinging contest. I compiled these results to see
     how far I can push Gerbil's performance envelope and evaluate progress as the macrology/compiler improves.
     Take them with a grain of salt.
@@ -40,74 +45,53 @@
 <th align="center">⋄⋄⋄</th><th align="center">gerbil</th>
 </tr>
 <tr>
-<td>binarytrees</td>
-<td/><td align="right" style="background-color:lightgreen">2.89 (+8.2%)</td>
-<td/><td align="right" style="background-color:orangered">11.47 (+329.5%)</td>
-<td/><td align="right" style="background-color:yellow">4.43 (+65.9%)</td>
-<td/><td align="right" style="background-color:lawngreen">2.67 ↻</td>
-</tr>
-<tr>
-<td>chameneosredux</td>
-<td/><td align="right" style="background-color:orange">7.77 (+164.2%)</td>
-<td/><td align="right" style="color:purple"> INCORRECT OUTPUT</td>
-<td/><td align="right" style="color:purple"> INCORRECT OUTPUT</td>
-<td/><td align="right" style="background-color:lawngreen">2.94 ↻</td>
-</tr>
-<tr>
 <td>fannkuchredux</td>
-<td/><td align="right" style="background-color:orangered">5.75 (+207.4%)</td>
-<td/><td align="right" style="background-color:lawngreen">1.87 ↻</td>
-<td/><td align="right" style="background-color:lightcyan">2.27 (+21.3%)</td>
-<td/><td align="right" style="background-color:lightyellow">2.65 (+41.7%)</td>
-</tr>
-<tr>
-<td>fasta</td>
-<td/><td align="right" style="background-color:orangered">3.96 (+238.4%)</td>
-<td/><td align="right" style="background-color:lightcyan">1.30 (+11.1%)</td>
-<td/><td align="right" style="background-color:lightcyan">1.32 (+12.8%)</td>
-<td/><td align="right" style="background-color:lawngreen">1.17 ↻</td>
-</tr>
-<tr>
-<td>fastaredux</td>
-<td/><td align="right" style="color:purple"> NO PROGRAM</td>
-<td/><td align="right" style="background-color:lightgreen">0.31 (+3.3%)</td>
-<td/><td align="right" style="background-color:lawngreen">0.30 ↻</td>
-<td/><td align="right" style="background-color:lightyellow">0.42 (+40.%)</td>
-</tr>
-<tr>
-<td>mandelbrot</td>
-<td/><td align="right" style="background-color:orangered">14.49 (+318.7%)</td>
-<td/><td align="right" style="background-color:lawngreen">3.46 ↻</td>
-<td/><td align="right" style="background-color:yellow">5.54 (+60.1%)</td>
-<td/><td align="right" style="background-color:lightyellow">4.48 (+29.4%)</td>
+<td/><td align="right" style="background-color:orange">4.69 (+156.2%)</td>
+<td/><td align="right" style="background-color:lightyellow">2.61 (+42.6%)</td>
+<td/><td align="right" style="background-color:lawngreen">1.83 ↻</td>
+<td/><td align="right" style="background-color:lightyellow">2.64 (+44.2%)</td>
 </tr>
 <tr>
 <td>nbody</td>
-<td/><td align="right" style="background-color:orangered">3.63 (+672.3%)</td>
-<td/><td align="right" style="background-color:lightyellow">0.69 (+46.8%)</td>
-<td/><td align="right" style="background-color:lightgreen">0.48 (+2.1%)</td>
-<td/><td align="right" style="background-color:lawngreen">0.47 ↻</td>
-</tr>
-<tr>
-<td>pidigits</td>
-<td/><td align="right" style="background-color:orangered">9.13 (+3551.9%)</td>
-<td/><td align="right" style="background-color:yellow">0.41 (+63.9%)</td>
-<td/><td align="right" style="background-color:lawngreen">0.25 ↻</td>
-<td/><td align="right" style="background-color:lightcyan">0.28 (+12.%)</td>
+<td/><td align="right" style="background-color:orangered">1.89 (+320.%)</td>
+<td/><td align="right" style="background-color:lawngreen">0.45 ↻</td>
+<td/><td align="right" style="background-color:lightgreen">0.48 (+6.6%)</td>
+<td/><td align="right" style="background-color:lightgreen">0.47 (+4.4%)</td>
 </tr>
 <tr>
 <td>spectralnorm</td>
-<td/><td align="right" style="background-color:orangered">6.96 (+1731.5%)</td>
+<td/><td align="right" style="background-color:orangered">3.05 (+702.6%)</td>
 <td/><td align="right" style="background-color:yellow">0.75 (+97.3%)</td>
 <td/><td align="right" style="background-color:lawngreen">0.38 ↻</td>
 <td/><td align="right" style="background-color:lightgreen">0.41 (+7.8%)</td>
 </tr>
 <tr>
-<td>threadring</td>
-<td/><td align="right" style="background-color:orangered">4.12 (+464.3%)</td>
-<td/><td align="right" style="background-color:lawngreen">0.73 ↻</td>
-<td/><td align="right" style="background-color:orangered">29.72 (+3971.2%)</td>
-<td/><td align="right" style="background-color:yellow">1.33 (+82.1%)</td>
+<td>mandelbrot</td>
+<td/><td align="right" style="background-color:orange">10.08 (+191.3%)</td>
+<td/><td align="right" style="background-color:lawngreen">3.46 ↻</td>
+<td/><td align="right" style="background-color:yellow">5.54 (+60.1%)</td>
+<td/><td align="right" style="background-color:lightyellow">4.48 (+29.4%)</td>
+</tr>
+<tr>
+<td>pidigits</td>
+<td/><td align="right" style="background-color:yellow">0.36 (+56.5%)</td>
+<td/><td align="right" style="background-color:lightyellow">0.29 (+26.%)</td>
+<td/><td align="right" style="background-color:lawngreen">0.23 ↻</td>
+<td/><td align="right" style="background-color:lightcyan">0.28 (+21.7%)</td>
+</tr>
+<tr>
+<td>fasta</td>
+<td/><td align="right" style="background-color:orangered">1.85 (+330.2%)</td>
+<td/><td align="right" style="background-color:orangered">1.31 (+204.6%)</td>
+<td/><td align="right" style="background-color:lawngreen">0.43 ↻</td>
+<td/><td align="right" style="background-color:orange">1.17 (+172.%)</td>
+</tr>
+<tr>
+<td>binarytrees</td>
+<td/><td align="right" style="background-color:lawngreen">1.50 ↻</td>
+<td/><td align="right" style="background-color:orangered">8.77 (+484.6%)</td>
+<td/><td align="right" style="background-color:orange">4.43 (+195.3%)</td>
+<td/><td align="right" style="background-color:lightyellow">2.09 (+39.3%)</td>
 </tr>
 </table>
 </body>

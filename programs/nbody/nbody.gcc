@@ -1,8 +1,8 @@
 /* The Computer Language Benchmarks Game
- * http://benchmarksgame.alioth.debian.org/
+ * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
  *
  * contributed by Christoph Bauer
- *  
+ *
  */
 
 #include <math.h>
@@ -138,4 +138,3 @@ int main(int argc, char ** argv)
   printf ("%.9f\n", energy(NBODIES, bodies));
   return 0;
 }
-

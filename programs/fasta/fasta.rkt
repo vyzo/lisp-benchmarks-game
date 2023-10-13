@@ -1,107 +1,121 @@
 #lang racket/base
 
 ;;; The Computer Language Benchmarks Game
-;;; http://benchmarksgame.alioth.debian.org/
+;;; https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
 
-;;; Derived from the Chicken Scheme variant by Anthony Borla
-;;; contributed by Matthew Flatt
+;;; Derived from C version by Joern Inge Vestgaarden
+;;;                 and Jorge Peixoto de Morais Neto
+;;; Contributed by Sam Tobin-Hochstadt
 
-
-(require racket/cmdline)
+(require racket/cmdline racket/require (for-syntax racket/base) (only-in racket/flonum for/flvector)
+         (filtered-in (λ (name) (regexp-replace #rx"unsafe-" name ""))
+                       racket/unsafe/ops))
 
 (define +alu+
-  (bytes-append
-   #"GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG"
-   #"GAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGA"
-   #"CCAGCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAAAT"
-   #"ACAAAAATTAGCCGGGCGTGGTGGCGCGCGCCTGTAATCCCA"
-   #"GCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGG"
-   #"AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC"
-   #"AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA"))
+  (bytes-append #"GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG"
+                #"GAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGA"
+                #"CCAGCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAAAT"
+                #"ACAAAAATTAGCCGGGCGTGGTGGCGCGCGCCTGTAATCCCA"
+                #"GCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGG"
+                #"AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC"
+                #"AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA"))
 
-(define +iub+
-  (list
-   '(#\a . 0.27) '(#\c . 0.12) '(#\g . 0.12) '(#\t . 0.27) '(#\B . 0.02)
-   '(#\D . 0.02) '(#\H . 0.02) '(#\K . 0.02) '(#\M . 0.02) '(#\N . 0.02)
-   '(#\R . 0.02) '(#\S . 0.02) '(#\V . 0.02) '(#\W . 0.02) '(#\Y . 0.02)))
+(define (build-table t)
+  (cons (apply bytes (map (compose char->integer car) t))
+        (for/flvector ([i t]) (cdr i))))
 
-(define +homosapien+
-  (list
-   '(#\a . 0.3029549426680) '(#\c . 0.1979883004921)
-   '(#\g . 0.1975473066391) '(#\t . 0.3015094502008)))
+(define IUB
+  (build-table
+   '([#\a . 0.27] [#\c . 0.12] [#\g . 0.12] [#\t . 0.27] [#\B . 0.02]
+     [#\D . 0.02] [#\H . 0.02] [#\K . 0.02] [#\M . 0.02] [#\N . 0.02]
+     [#\R . 0.02] [#\S . 0.02] [#\V . 0.02] [#\W . 0.02] [#\Y . 0.02])))
+
+(define HOMOSAPIEN
+  (build-table '([#\a . 0.3029549426680] [#\c . 0.1979883004921]
+                 [#\g . 0.1975473066391] [#\t . 0.3015094502008])))
 
 ;; -------------
 
-(define +line-size+ 60)
+(define line-length 60)
+
+(define IA 3877)
+(define IC 29573)
+(define IM 139968)
 
 ;; -------------------------------
 
-(define (make-random seed)
-  (let* ((ia 3877) (ic 29573) (im 139968) (last seed))
-    (lambda (max)
-      (set! last (modulo (+ ic (* last ia)) im))
-      (/ (* max last) im))))
+(define LAST 42)
 
 ;; -------------------------------
 
 (define (make-cumulative-table frequency-table)
-  (let ([cumulative 0.0])
-    (for/list ([x frequency-table])
-      (set! cumulative (+ cumulative (cdr x))) 
-      (cons (char->integer (car x)) cumulative))))
+  (define bs (car frequency-table))
+  (define ps (cdr frequency-table))
+  (define len (bytes-length bs))
+  (let loop ([i 0] [cum 0.0])
+    (when (fx< i len)
+      (define this (flvector-ref ps i))
+      (define new (fl+ this cum))
+      (flvector-set! ps i new)
+      (loop (fx+ 1 i) new))))
 
 ;; -------------
 
-(define random-next (make-random 42))
-(define +segmarker+ ">")
+(define (random-next max)
+  (set! LAST (fxmodulo (fx+ IC (fx* LAST IA)) IM))
+  (fl/ (fl* max (fx->fl LAST)) (fx->fl IM)))
 
 ;; -------------
 
-(define (select-random cumulative-table)
-  (let ((rvalue (random-next 1.0)))
-    (let select-over-threshold ([table cumulative-table])
-      (if (<= rvalue (cdar table))
-          (caar table)
-          (select-over-threshold (cdr table))))))
+(define (repeat-fasta s count)
+  (define out (current-output-port))
+  (define len (bytes-length s))
+  (define s2 (make-bytes (fx+ len line-length)))
+  (bytes-copy! s2 0 s 0 len)
+  (bytes-copy! s2 len s 0 line-length)
+  (let loop ([count count] [pos 0])
+    (define line (fxmin line-length count))
+    (write-bytes s2 out pos (fx+ pos line))
+    (newline out)
+    (define count* (fx- count line))
+    (when (fx> count* 0)
+      (define pos* (fx+ pos line))
+      (loop count* (if (fx>= pos* len) (fx- pos* len) pos*)))))
+
 
 ;; -------------
 
-(define (repeat-fasta id desc n_ sequence line-length)
-  (let ((seqlen (bytes-length sequence))
-        (out (current-output-port)))
-    (display (string-append +segmarker+ id " " desc "\n") out)
-    (let loop-o ((n n_) (k 0))
-      (unless (<= n 0) 
-        (let ((m (min n line-length)))
-          (let loop-i ((i 0) (k k))
-            (if (>= i m) 
-                (begin
-                  (newline out)
-                  (loop-o (- n line-length) k))
-                (let ([k (if (= k seqlen) 0 k)])
-                  (write-byte (bytes-ref sequence k) out)
-                  (loop-i (add1 i) (add1 k))))))))))
-
-;; -------------
-
-(define (random-fasta id desc n_ cumulative-table line-length)
-  (let ((out (current-output-port)))
-    (display (string-append +segmarker+ id " " desc "\n") out)
-    (let loop-o ((n n_))
-      (unless (<= n 0)
-        (for ([i (in-range (min n line-length))])
-          (write-byte (select-random cumulative-table) out))
-        (newline out)
-        (loop-o (- n line-length))))))
+(define-syntax-rule (random-fasta genelist cnt)
+  (let ()
+    (define out (current-output-port))
+    (define ps (cdr genelist))
+    (define cs (car genelist))
+    (let loop ([count cnt])
+      (define line (fxmin line-length count))
+      (define buf (make-bytes (fx+ 1 line-length)))
+      (let inner ([pos 0])
+        (define r (random-next 1.0))
+        (define i (let wh ([i 0]) (if (fl< (flvector-ref ps i) r) (wh (fx+ i 1)) i)))
+        (bytes-set! buf pos (bytes-ref cs i))
+        (define pos+ (fx+ pos 1))
+        (when (fx< pos+ line)
+          (inner pos+)))
+      (bytes-set! buf line (char->integer #\newline))
+      (write-bytes buf out 0 (fx+ line 1))
+      (define count- (fx- count line))
+      (when (fx> count- 0)
+        (loop count-)))))
 
 ;; -------------------------------
-  
-(let ((n (command-line #:args (n) (string->number n))))
-    
-  (repeat-fasta "ONE" "Homo sapiens alu" (* n 2) +alu+ +line-size+)
-  
-  (random-fasta "TWO" "IUB ambiguity codes" (* n 3)
-                (make-cumulative-table +iub+) +line-size+)
-  
-  (random-fasta "THREE" "Homo sapiens frequency" (* n 5)
-                (make-cumulative-table +homosapien+) +line-size+))
+
+(define n (command-line #:args (n) (string->number n)))
+
+(make-cumulative-table IUB)
+(make-cumulative-table HOMOSAPIEN)
+
+(display ">ONE Homo sapiens alu\n")
+(repeat-fasta +alu+ (* n 2))
+(display ">TWO IUB ambiguity codes\n")
+(random-fasta IUB (* n 3))
+(display ">THREE Homo sapiens frequency\n")
+(random-fasta HOMOSAPIEN (* n 5))

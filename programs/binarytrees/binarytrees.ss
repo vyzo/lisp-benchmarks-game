@@ -12,46 +12,40 @@
   (fixnum))
 (include "int.ss")
 
-(defstruct node (left val right) final: #t)
-
-(defrule (new item)
-  (node #f item #f))
+(defalias node cons)
+(defrule (new)
+  (node #f #f))
 
 (defrule (leaf? l)
-  (fixnum? l))
+  (not l))
 
-(def (make item d)
+(def (make d)
   (if (= d 0)
-    item
-    (let ((n (new item))
-          (item2 (* item 2))
+    #f
+    (let ((n (new))
           (d2 (- d 1)))
-        (make-left! (- item2 1) d2 n)
-        (make-right! item2 d2 n)
+        (make-left! d2 n)
+        (make-right! d2 n)
         n)))
 
-(defrule (defmake make! field)
-  (with-id ((n 'n) (target #'n "." 'field))
-    (def (make! item d n)
-      (using (n :- node)
-        (if (= d 0)
-          (set! target item)
-          (let ((nn (new item))
-                (item2 (* item 2))
-                (d2 (- d 1)))
-            (set! target nn)
-            (make-left! (- item2 1) d2 nn)
-            (make-right! item2 d2 nn)))))))
+(defrule (defmake make! target)
+  (def (make!  d n)
+    (if (= d 0)
+      (set! (target n) #f)
+      (let ((nn (new))
+            (d2 (- d 1)))
+        (set! (target n) nn)
+        (make-left! d2 nn)
+        (make-right! d2 nn)))))
 
-(defmake make-left! left)
-(defmake make-right! right)
+(defmake make-left! car)
+(defmake make-right! cdr)
 
 (def (check t)
   (if (leaf? t)
     1
-    (using (t :- node)
-      (+ 1 (+ (check t.left)
-              (check t.right))))))
+    (+ 1 (+ (check (car t))
+            (check (cdr t))))))
 
 (def (main n)
   (let* ((n (string->number n))
@@ -60,15 +54,15 @@
     (let (stretch-depth (+ max-depth 1))
       (printf "stretch tree of depth ~a\t check: ~a\n"
               stretch-depth
-              (check (make 0 stretch-depth))))
-    (let (long-lived-tree (make 0 max-depth))
+              (check (make stretch-depth))))
+    (let (long-lived-tree (make max-depth))
       (for (d (in-range 4 (+ max-depth 1) 2))
         (let ((iterations (<< 1 (+ (- max-depth d) min-depth))))
           (printf "~a\t trees of depth ~a\t check: ~a\n"
                   iterations
                   d
-                  (for/fold (c 0) (i (in-range iterations))
-                    (+ c (check (make i d)))))))
+                  (for/fold (c 0) (_ (in-range iterations))
+                    (+ c (check (make d)))))))
       (printf "long lived tree of depth ~a\t check: ~a\n"
               max-depth
               (check long-lived-tree)))))

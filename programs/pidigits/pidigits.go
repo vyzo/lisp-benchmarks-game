@@ -1,110 +1,108 @@
-/* The Computer Language Benchmarks Game
- * http://benchmarksgame.alioth.debian.org/
+/* The Computer Language Benchmarpks Game
+ * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
  *
  * based on pidigits.c (by Paolo Bonzini & Sean Bartlett,
- *                      modified by Michael Mellor)
+ *    modified by Michael Mellor)
  *
- * contributed by The Go Authors.
- * flag.Arg hack by Isaac Gouy
- * line printer hack by Sean Lake
- * "math/big" package replaced by "github.com/ncw/gmp" by pav5000
- * modified by Bert Gijsbers
+ * contributed by Zhao Zhiqiang.
+ *
+ * Modified by Antonio Petri to use strings.Builder
  */
 
 package main
 
+/*
+#cgo LDFLAGS: -lgmp
+#include <gmp.h>
+#include <stdlib.h>
+*/
+import "C"
+
 import (
-    "bufio"
-    "flag"
-    "fmt"
-    big "github.com/ncw/gmp"
-    "os"
-    "strconv"
+	"bufio"
+	"flag"
+	"fmt"
+	"os"
+	"runtime"
+	"strconv"
+	"strings"
 )
 
 var n = 0
-var silent = false
 
-var (
-    tmp1  = big.NewInt(0)
-    tmp2  = big.NewInt(0)
-    y2    = big.NewInt(1)
-    bigk  = big.NewInt(0)
-    accum = big.NewInt(0)
-    denom = big.NewInt(1)
-    numer = big.NewInt(1)
-    ten   = big.NewInt(10)
-    three = big.NewInt(3)
-    four  = big.NewInt(4)
-)
+func extract_digit(nth uint32) uint32 {
+	C.mpz_mul_ui(&tmp1[0], &num[0], C.ulong(nth))
+	C.mpz_add(&tmp2[0], &tmp1[0], &acc[0])
+	C.mpz_tdiv_q(&tmp1[0], &tmp2[0], &den[0])
 
-func next_term(k int64) int64 {
-    for {
-        k++
-        y2.SetInt64(k*2 + 1)
-        bigk.SetInt64(k)
-
-        tmp1.Lsh(numer, 1)
-        accum.Add(accum, tmp1)
-        accum.Mul(accum, y2)
-        denom.Mul(denom, y2)
-        numer.Mul(numer, bigk)
-
-        if accum.Cmp(numer) > 0 {
-            return k
-        }
-    }
+	return uint32(C.mpz_get_ui(&tmp1[0]))
 }
 
-func extract_digit(nth *big.Int) int64 {
-    tmp1.Mul(nth, numer)
-    tmp2.Add(tmp1, accum)
-    tmp1.Div(tmp2, denom)
-    return tmp1.Int64()
+func eliminate_digit(d uint32) {
+	C.mpz_submul_ui(&acc[0], &den[0], C.ulong(d))
+	C.mpz_mul_ui(&acc[0], &acc[0], 10)
+	C.mpz_mul_ui(&num[0], &num[0], 10)
 }
 
-func next_digit(k int64) (int64, int64) {
-    for {
-        k = next_term(k)
-        d3 := extract_digit(three)
-        d4 := extract_digit(four)
-        if d3 == d4 {
-            return d3, k
-        }
-    }
+func next_term(k uint32) {
+	k2 := C.ulong(k*2 + 1)
+
+	C.mpz_addmul_ui(&acc[0], &num[0], 2)
+	C.mpz_mul_ui(&acc[0], &acc[0], k2)
+	C.mpz_mul_ui(&den[0], &den[0], k2)
+	C.mpz_mul_ui(&num[0], &num[0], C.ulong(k))
 }
 
-func eliminate_digit(d int64) {
-    tmp1.SetInt64(d)
-    accum.Sub(accum, tmp1.Mul(denom, tmp1))
-    accum.Mul(accum, ten)
-    numer.Mul(numer, ten)
-}
+var tmp1, tmp2, acc, den, num C.mpz_t
 
 func init() {
-    flag.Parse()
-    if flag.NArg() > 0 {
-        n, _ = strconv.Atoi(flag.Arg(0))
-    }
+	runtime.GOMAXPROCS(1)
+	flag.Parse()
+	if flag.NArg() > 0 {
+		n, _ = strconv.Atoi(flag.Arg(0))
+	}
+	runtime.LockOSThread()
 }
 
+const base = 48
+
 func main() {
-    w := bufio.NewWriter(os.Stdout)
-    defer w.Flush()
-    line := make([]byte, 0, 10)
-    var d, k int64
-    for i := 1; i <= n; i++ {
-        d, k = next_digit(k)
-        line = append(line, byte(d)+'0')
-        if len(line) == 10 {
-            if silent != true {
-                fmt.Fprintf(w, "%s\t:%d\n", string(line), i)
-            }
-            line = line[:0]
-        }
-        eliminate_digit(d)
-    }
-    if len(line) > 0 && silent != true {
-        fmt.Fprintf(w, "%-10s\t:%d\n", string(line), n)
-    }
+	w := bufio.NewWriter(os.Stdout)
+	var sb strings.Builder
+	sb.Grow(10)
+
+	defer w.Flush()
+
+	C.mpz_init(&tmp1[0])
+	C.mpz_init(&tmp2[0])
+
+	C.mpz_init_set_ui(&acc[0], 0)
+	C.mpz_init_set_ui(&den[0], 1)
+	C.mpz_init_set_ui(&num[0], 1)
+
+	k := uint32(0)
+	d := uint32(0)
+
+	for i := 0; i < n; {
+		k++
+		next_term(k)
+
+		if C.mpz_cmp(&num[0], &acc[0]) > 0 {
+			continue
+		}
+
+		d = extract_digit(3)
+		if d != extract_digit(4) {
+			continue
+		}
+
+		sb.WriteByte(base + byte(d))
+		i++
+		if i%10 == 0 {
+			fmt.Fprintf(w, "%s\t:%d\n", sb.String(), i)
+			sb.Reset()
+		}
+
+		eliminate_digit(d)
+	}
 }

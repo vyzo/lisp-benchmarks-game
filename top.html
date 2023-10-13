@@ -2,9 +2,12 @@
   <head><title>The LISP Benchmark Game</title></head>
 <body>
   <h2>Benchmark Games for Gerbil, Racket, Go, and C (GCC)</h2>
-  <p>This is based on the now defunct Programming Language Shootout, aka The Benchmark Games.
+  <p>This was originally based on the now defunct Alioth Programming Language Shootout, aka The Benchmark Games.
+    Once I posted the site, it was brought to my attention that the Game is <i>still active</i>.
+    Mea culpa, I have updated the programs to use the latest programs from the official game site.
+    I picked the fastest program for each language; see notes below.
   <p> I run the tests with Gerbil, and compared with Racket, Go, and C.
-    The Gerbil programs are new, for the others I used the existing (expertly written and heavily optimized) programs from the <a href="https://github.com/Byron/benchmarksgame-cvs-mirror/tree/master/bench">Language Shootout Archive</a>.
+    The Gerbil programs are new, for the others I used the existing (expertly written and heavily optimized) programs from the <a href="https://benchmarksgame-team.pages.debian.net/benchmarksgame/index.html">23.03 Benchmarks Game</a>.
   <p> Versions used: <b>Gerbil v0.18</b>, <b>Racket v8.2</b>, <b>Go 1.21.2</b>, and <b>GCC 11.4</b>
   <p>The source code for the benchmark game is <a href="https://github.com/vyzo/lisp-benchmarks-game/">here</a>.
 
@@ -13,8 +16,10 @@
   <p>Each benchmark was run 3 times, and I kept the best value.
   <p><b>Note</b> C programs were compiled with <code>gcc -O2</code>.
   <p><b>Note</b> Some benchmarks have a fixed small input, and take 0 time to complete (less than the 10ms resolution of /usr/bin/time); so they are not included here, as they are pointless.
-  <p><b>Note</b> With the exception of chameneosredux and threadring, the other benchmark all utilize a single core. I want to compare apples to apples, not how well a given language can multicore.
-  <p><b>Note</b> In the chameneosredux, Go and GCC produce non-deterministic output.
+  <p><b>Note</b> The benchmark all utilize a <b>single core</b>. I want to compare apples to apples, not how well a given language can multicore. Gerbil is also multicore capable, but the SMP backend is not stable yet; when it is, it will be time for Gerbil v1.0.
+    <br>
+    For C, I also kept the versions that don't utilize architecture specific extensions, as these are not generally portable and don't even compile on my laptop. I want reproducible benchmarks, not something bogus that relies on a specific Intel chip extensions.
+    That means that _there may exist faster C_ programs out there, but they may or may not compile and run on any given machine, so I opted to stay portable.
   <p><b>Note</b>This is not a d*ck swinging contest. I compiled these results to see
     how far I can push Gerbil's performance envelope and evaluate progress as the macrology/compiler improves.
     Take them with a grain of salt.
