@@ -39,9 +39,10 @@
 
 (def (check t)
   (let loop ((t t) (r 0))
-    (if (leaf? t)
-      (+ r 1)
-      (loop (car t) (loop (cdr t) (+ r 1))))))
+    (cond
+     ((car t)
+      => (lambda (left) (loop left (loop (cdr t) (+ r 1)))))
+     (else (+ r 3)))))
 
 (def (main n)
   (let* ((n (string->number n))
