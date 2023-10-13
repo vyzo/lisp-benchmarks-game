@@ -17,6 +17,7 @@
 (include "flonum.ss")
 (include "io.ss")
 (include "int.ss")
+(include "unroll.ss")
 
 (def +limit-sqr+ 4.0)
 (def +iterations+ 50)
@@ -35,7 +36,7 @@
     (for (y (in-range image-width-and-height))
       (fl!= prefetched-initial-i (@ initial-i y))
       (for (x-major (in-range 0 image-width-and-height 8))
-        (for (x-minor (in-range 8))
+        (unroll 8 x-minor
           (let (x-major+minor (+ x-major x-minor))
             (fl!= (@ pixel-group-r x-minor) (@ initial-r x-major+minor))
             (fl!= (@ pixel-group-i x-minor) prefetched-initial-i)))
