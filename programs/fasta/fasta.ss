@@ -37,10 +37,20 @@
 (def IA 3877)
 (def IC 29573)
 (def IM 139968)
-(def +seed+ 42)
+(def SEED 42)
+(def +precomputed+
+  (let ((precomputed (make-vector IM))
+        (seed SEED))
+    (for (i (in-range IM))
+      (set! seed (% (+ IC (* seed IA)) IM))
+      (vector-set! precomputed i seed))
+    precomputed))
+(def +next+ 0)
+
 (def (random-next!)
-  (set! +seed+ (% (+ IC (* +seed+ IA)) IM))
-  +seed+)
+  (let (next (vector-ref +precomputed+ +next+))
+    (set! +next+ (% (+ +next+ 1) IM))
+    next))
 
 (defregister cumulative)
 (def (make-cumulative-table frequency-table)
