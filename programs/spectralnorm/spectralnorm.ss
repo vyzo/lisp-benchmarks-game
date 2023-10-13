@@ -16,6 +16,7 @@
   (fixnum))
 (include "io.ss")
 (include "flonum.ss")
+(include "int.ss")
 
 (def +memo+ #f)
 (def (memo i j)
@@ -23,7 +24,7 @@
     (cond
      ((vector-ref +memo+ i+j))
      (else
-      (let (val (quotient (* i+j (+ i+j 1)) 2))
+      (let (val (// (* i+j (+ i+j 1)) 2))
         (vector-set! +memo+ i+j val)
         val)))))
 

@@ -129,11 +129,11 @@
 
 ;; Returns the direction rotated 60 degrees clockwise
 (def (rotate dir)
-  (remainder (+ dir 2) PIVOT))
+  (% (+ dir 2) PIVOT))
 
 ;; Returns the direction flipped on the horizontal axis
 (def (flip dir)
-  (remainder (- PIVOT dir) PIVOT))
+  (% (- PIVOT dir) PIVOT))
 
 ;; Returns the new cell index from the specified cell in the
 ;; specified direction.  The index is only valid if the
@@ -141,7 +141,7 @@
 ;; out_of_bounds function first.
 (def (shift cell dir)
   (defrule (cell/5%2)
-    (remainder (quotient cell 5) 2))
+    (% (// cell 5) 2))
   (direction-case dir
     ((E)
      (+ cell 1))
@@ -173,8 +173,8 @@
 ;; of the board.  Used to determine if a piece is at a legal board
 ;; location or not.
 (def (out-of-bounds? cell dir)
-  (defrule (%10) (remainder cell 10))
-  (defrule (%5) (remainder cell 5))
+  (defrule (%10) (% cell 10))
+  (defrule (%5) (% cell 5))
   (direction-case dir
     ((E)
      (= (%5) 4))
@@ -266,7 +266,7 @@
   (let (piece-mask 0)
     (for (i (in-range 5))
       (set! piece-mask
-        (fxior piece-mask (fxarithmetic-shift-left 1 (@@ cell i)))))
+        (fxior piece-mask (<< 1 (@@ cell i)))))
     piece-mask))
 
 ;; Record the piece and other important information in arrays that will
@@ -315,7 +315,7 @@
       (not (or (= c 0)
                (and (= c 5) (= piece 8))
                (and (= c 40) (= piece 8))
-               (and (= (remainder c 5) 0) (= piece 0)))))))
+               (and (= (% c 5) 0) (= piece 0)))))))
 
 ;; Calculate all six rotations of the specified piece at the specified index.
 ;; We calculate only half of piece 3's rotations.  This is because any solution
@@ -366,18 +366,18 @@
   (let/cc return
     (let* ((row2-shift
             (if even?
-              (fxior (fxand (fxarithmetic-shift-left row2 1) ROW-MASK) #x01)
-              (fxior (fxarithmetic-shift-right row2 1) #x10)))
+              (fxior (fxand (<< row2 1) ROW-MASK) #x01)
+              (fxior (>> row2 1) #x10)))
            (block (fxand
                    (fxand (fxxor row1 row2) row2)
                    (fxand (fxxor row1 row2-shift) row2-shift)))
            (in-zeros? #f)
            (group-ok? #f))
       (for (i (in-range 5))
-        (if (= (fxand row1 (fxarithmetic-shift-left 1 i)) 0)
+        (if (= (fxand row1 (<< 1 i)) 0)
           (begin
             (set! in-zeros? #t)
-            (when (= (fxand block (fxarithmetic-shift-left 1 i)) 0)
+            (when (= (fxand block (<< 1 i)) 0)
               (set! group-ok? #t)))
           (when in-zeros?
             (unless group-ok?
@@ -435,9 +435,9 @@
   (if (>= cell 40)
     0
     (let (current-triple
-          (fxand (fxarithmetic-shift-right board (* (quotient cell 5) 5))
+          (fxand (>> board (* (// cell 5) 5))
                  TRIPLE-MASK))
-      (if (= (remainder (quotient cell 5) 2) 0)
+      (if (= (% (// cell 5) 2) 0)
         (@@ bad-even-triple current-triple)
         (@@ bad-odd-triple current-triple)))))
 
@@ -464,16 +464,16 @@
             (@@ sol-nums sol-no))
           (set! (@@ solutions (+ solution-count 1) (- 49 index))
             (@@ sol-nums sol-no)))
-        (set! sol-mask (fxarithmetic-shift-right sol-mask 1)))))
+        (set! sol-mask (>> sol-mask 1)))))
   (set! solution-count (+ solution-count 2)))
 
 (def (solve depth cell)
   (when (< solution-count max-solutions)
-    (while (not (= (fxand board (fxarithmetic-shift-left 1 cell)) 0))
+    (while (not (= (fxand board (<< 1 cell)) 0))
       (set! cell (+ cell 1)))
     (let loop-piece ((piece 0))
       (when (< piece 10)
-        (let (piece-no-mask (fxarithmetic-shift-left 1 piece))
+        (let (piece-no-mask (<< 1 piece))
           (if (= (fxand avail piece-no-mask) 0)
             (loop-piece (+ piece 1))
             (begin

@@ -14,6 +14,7 @@
   (not safe)
   (fixnum))
 (include "io.ss")
+(include "int.ss")
 (include "gmp.ss")
 
 (def tmp1 (mpz_new))
@@ -61,7 +62,7 @@
           (when (= d (extract-digit 4))
             (write-output-u8 (+ (char->integer #\0) d))
             (set! i (+ i 1))
-            (when (= (remainder i 10) 0)
+            (when (= (% i 10) 0)
               (write-output-char #\tab)
               (write-output-char #\:)
               (write-output-string (number->string i))

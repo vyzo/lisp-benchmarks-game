@@ -11,6 +11,7 @@
   (not safe)
   (fixnum))
 (include "io.ss")
+(include "int.ss")
 
 (def +alu+
   (string-append
@@ -39,8 +40,8 @@
 (def SCALE-fl (fixnum->flonum SCALE))
 (def +seed+ 42)
 (def (random-next!)
-  (set! +seed+ (remainder (+ IC (* +seed+ IA)) IM))
-  (quotient (* +seed+ SCALE) IM))
+  (set! +seed+ (% (+ IC (* +seed+ IA)) IM))
+  (// (* +seed+ SCALE) IM))
 
 (def (make-cumulative-table frequency-table)
   (let* ((cumulative 0)

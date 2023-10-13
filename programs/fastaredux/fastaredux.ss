@@ -11,6 +11,7 @@
   (not safe)
   (fixnum))
 (include "io.ss")
+(include "int.ss")
 
 (def +alu+
   (string-append
@@ -39,7 +40,7 @@
 (def LOOKUP-fl (fixnum->flonum LOOKUP))
 (def +seed+ 42)
 (def (random-next!)
-  (let (seed (remainder (+ IC (* +seed+ IA)) IM))
+  (let (seed (% (+ IC (* +seed+ IA)) IM))
     (set! +seed+ seed)
     seed))
 
@@ -81,7 +82,7 @@
 
 (def (select-random lookup-table)
   (let* ((rand  (random-next!))
-         (index (quotient (fxarithmetic-shift-left rand LOOKUP-BITS) IM)))
+         (index (// (fxarithmetic-shift-left rand LOOKUP-BITS) IM)))
     (u8vector-ref lookup-table index)))
 
 (def (repeat-fasta head n sequence)

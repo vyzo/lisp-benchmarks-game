@@ -16,6 +16,7 @@
 
 (include "flonum.ss")
 (include "io.ss")
+(include "int.ss")
 
 (def +limit-sqr+ 4.0)
 (def +iterations+ 50)
@@ -40,7 +41,7 @@
             (fl!= (@ pixel-group-i x-minor) prefetched-initial-i)))
         (let loop ((iteration +iterations+) (eight-pixels #xff))
           (if (or (= eight-pixels 0) (= iteration 0))
-            (u8vector-set! pixels (+ (quotient (* y image-width-and-height) 8) (quotient x-major 8))
+            (u8vector-set! pixels (+ (// (* y image-width-and-height) 8) (// x-major 8))
                            eight-pixels)
             (let loop-x ((x-minor 0) (eight-pixels eight-pixels) (current-pixel-bitmask #x80))
               (if (< x-minor 8)
@@ -55,13 +56,13 @@
                           (if (fl!? > (+ (^2 reg-r) (^2 reg-i)) +limit-sqr+)
                             (fxand eight-pixels (fxnot current-pixel-bitmask))
                             eight-pixels)
-                          (fxarithmetic-shift-right current-pixel-bitmask 1)))
+                          (>> current-pixel-bitmask 1)))
                 (loop (- iteration 1) eight-pixels)))))))))
 
 (def (main n)
   (let* ((n (string->number n))
-         (image-width-and-height (* (quotient (+ n 7) 8) 8)))
-    (set! pixels (make-u8vector (quotient (expt image-width-and-height 2) 8) 0))
+         (image-width-and-height (* (// (+ n 7) 8) 8)))
+    (set! pixels (make-u8vector (// (expt image-width-and-height 2) 8) 0))
     (set! initial-r (make-f64vector image-width-and-height))
     (set! initial-i (make-f64vector image-width-and-height))
     (for (xy (in-range image-width-and-height))
