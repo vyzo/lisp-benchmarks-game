@@ -32,7 +32,7 @@ under the MIT license.
 ## How to run the benchmarks
 You need:
 - Gerbil v0.18-rc1 or later
-- Racket; I tested with v8.10
+- Racket; I tested with v8.6
 - Go; I tested with 1.21.2
 - GCC; I tested with 11.4.0
 
