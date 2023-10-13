@@ -18,18 +18,19 @@
 (include "flonum.ss")
 (include "int.ss")
 
-(def +memo+ #f)
-(def (memo i j)
-  (let (i+j (+ i j))
-    (cond
-     ((vector-ref +memo+ i+j))
-     (else
-      (let (val (+ (// (* i+j (+ i+j 1)) 2) 1))
-        (vector-set! +memo+ i+j val)
-        val)))))
+(def +A+ #f)
+(def (precompute-A! n)
+  (let (A (make-vector (* 2 n)))
+    (for (i (in-range n))
+      (for (j (in-range n))
+        (let (i+j (+ i j))
+          (let (val (+ (// (* i+j (+ i+j 1)) 2) 1))
+            (vector-set! A i+j val)
+            val))))
+    (set! +A+ A)))
 
 (def (eval-A i j)
-  (+ (memo i j) i))
+  (+ (vector-ref +A+ (+ i j)) i))
 
 (defregister vi)
 (def (times v u)
@@ -80,7 +81,7 @@
   (let* ((n (string->number n))
          (u (make-f64vector n 1.0))
          (v (make-f64vector n 0.0)))
-    (set! +memo+ (make-vector (* 2 n) #f))
+    (precompute-A! n)
     (for (_ (in-range 10))
       (at-times-transp v u)
       (at-times-transp u v))
