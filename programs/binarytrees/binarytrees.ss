@@ -10,6 +10,7 @@
 (declare
   (not safe)
   (fixnum))
+(include "int.ss")
 
 (defstruct node (left val right) final: #t)
 
@@ -62,7 +63,7 @@
               (check (make 0 stretch-depth))))
     (let (long-lived-tree (make 0 max-depth))
       (for (d (in-range 4 (+ max-depth 1) 2))
-        (let ((iterations (fxarithmetic-shift 1 (+ (- max-depth d) min-depth))))
+        (let ((iterations (<< 1 (+ (- max-depth d) min-depth))))
           (printf "~a\t trees of depth ~a\t check: ~a\n"
                   iterations
                   d
