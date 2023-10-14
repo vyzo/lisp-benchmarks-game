@@ -1,0 +1,35 @@
+body {
+    background: white;
+    font-family: 'Droid Sans', 'Sans Serif';
+    max-width: 80%;
+    padding-left: 5%;
+    padding-right: 5%;
+}
+
+table {
+    border: 2px solid;
+    border-collapse: collapse;
+}
+
+th {
+    padding: 15px;
+    background-color: #04AA6D;
+    color: beige;
+    border: 2px solid;
+    border-collapse: collapse;
+
+}
+
+td {
+    padding: 15px;
+    border: 2px solid;
+    border-collapse: collapse;
+}
+
+code {
+    font-family: 'Droid Sans Mono', 'Andale Mono', 'Monospace';
+}
+
+pre {
+    font-family: 'Droid Sans Mono', 'Andale Mono', 'Monospace';
+}
