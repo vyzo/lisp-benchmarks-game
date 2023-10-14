@@ -54,7 +54,7 @@
          (player-deltas
           (result-deltas player-results)))
     (displayln "<tr>")
-    (printf "<td>~a</td>~n" g)
+    (printf "<td><b>~a</b></td>~n" g)
     (for ((r player-results)
           (c player-colors)
           (d player-deltas))
