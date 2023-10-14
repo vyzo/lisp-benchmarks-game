@@ -24,7 +24,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	//"runtime"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -106,9 +106,8 @@ func renderRows(wg *sync.WaitGroup, s32 int32) {
 }
 
 func main() {
-	//pool = runtime.NumCPU() << 1
+	pool = runtime.NumCPU() << 1
 	//runtime.GOMAXPROCS(pool)
-	pool = 1
 
 	// Get input, if any...
 	flag.Parse()
