@@ -24,16 +24,8 @@
       (set! +output-cursor+ (+ +output-cursor+ 1)))))
 
 (defrule (write-output-string str)
-  (let* ((bytes (string->utf8 str))
-         (len   (u8vector-length bytes))
-         (output-cursor+len (+ +output-cursor+ len)))
-    (if (<= output-cursor+len +output-size+)
-      (begin
-        (subu8vector-move! bytes 0 len +output-buffer+  +output-cursor+)
-        (set! +output-cursor+ output-cursor+len))
-      (begin
-        (flush-output)
-        (fdwrite +output-fd+ bytes)))))
+  (for (i (in-range (string-length str)))
+    (write-output-u8 (char->integer (string-ref str i)))))
 
 (defrule (write-output-u8vector bytes)
   (begin
