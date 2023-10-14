@@ -3,7 +3,7 @@
 <body>
   <h2>Benchmark Games for Gerbil, Racket, Go, and C (GCC)</h2>
   <p> I run the tests with Gerbil, and compared with Racket, Go, and C.
-    The Gerbil programs are new, for the others I used the existing (expertly written and heavily optimized) programs from the <a href="https://benchmarksgame-team.pages.debian.net/benchmarksgame/index.html">23.03 Benchmarks Game</a>.
+    The Gerbil programs are new, for the others I used the existing (expertly written and heavily optimized) programs from the <a href="https://benchmarksgame-team.pages.debian.net/benchmarksgame/index.html">23.03 Benchmarks Game</a>, but see notes below about the C programs.
   <p> Versions used: <b>Gerbil v0.18</b>, <b>Racket v8.6</b>, <b>Go 1.21.2</b>, and <b>GCC 11.4</b>
   <p>The source code for the benchmark game is <a href="https://github.com/vyzo/lisp-benchmarks-game/">here</a>.
 
@@ -13,7 +13,7 @@
   <p><b>Note</b> C programs were compiled with <code>gcc -O2</code>.
   <p><b>Note</b> The benchmark all utilize a <b>single core</b>. I want to compare apples to apples, not how well a given language can multicore. Gerbil is also multicore capable, but the SMP backend is not stable yet; when it is, it will be time for Gerbil v1.0.
     <br>
-    For C, I also kept the versions that don't utilize architecture specific extensions, as these are not generally portable and don't even compile on my laptop. I want reproducible benchmarks, not something bogus that relies on a specific Intel chip.
+    For C, I kept the fastest versions that don't utilize architecture specific extensions, as these are not generally portable and don't even compile on my laptop. I want reproducible benchmarks, not something bogus that relies on a specific Intel chip.
     That means that <b>there may exist faster C programs out there</b>, but they may or may not compile and run on any given machine, so I opted to stay portable.
   <p><b>Note</b>This is not a d*ck swinging contest. I compiled these results to see
     how far I can push Gerbil's performance envelope and evaluate progress as the macrology/compiler improves.
